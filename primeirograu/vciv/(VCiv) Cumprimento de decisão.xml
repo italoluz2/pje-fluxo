@@ -1,0 +1,752 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(VCiv) Cumprimento de decisão">
+    <description><![CDATA[Fluxo para cumprimento de determinações do magistrado e outras providências da Secretaria]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('-1:1338,1342:1469')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469')}" actor-id="#{actor.id}"/>
+    </swimlane>
+    <swimlane name="Conciliação">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,7:5197,7:5886,6:1469')}"/>
+    </swimlane>
+    <swimlane name="Secretaria e Servidor de cálculo">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469,5:5891')}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <description><![CDATA[]]></description>
+        <transition to="(VCiv) Separação em cumprimento de decisão" name="(VCiv) Separação em cumprimento de decisão"/>
+    </start-state>  
+    <!-- NODES -->
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+        <task name="Nó de Desvio - (VCiv) Cumprimento de decisão" swimlane="Nó de Desvio - (VCiv) Cumprimento de decisão"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(VCiv) Processos suspensos" name="(VCiv) Processos suspensos"/>
+        <transition to="(VCiv) Redistribuir" name="(VCiv) Redistribuir"/>
+        <transition to="(VCiv) Redistribuir eletronicamente" name="(VCiv) Redistribuir eletronicamente"/>
+        <transition to="(VCiv) Redistribuir fisicamente" name="(VCiv) Redistribuir fisicamente"/>
+        <transition to="(VCiv) Designar audiência" name="(VCiv) Designar audiência"/>
+        <transition to="(VCiv) Audiência designada" name="(VCiv) Audiência designada"/>
+        <transition to="(VCiv) Aguardar Laudo Técnico" name="(VCiv) Aguardar Laudo Técnico"/>
+        <transition to="(VCiv) Encaminhar para instância superior" name="(VCiv) Encaminhar para instância superior"/>
+        <transition to="(VCiv) Aguardando julgamento da instância superior - eletronicamente" name="(VCiv) Aguardando julgamento da instância superior - eletronicamente"/>
+        <transition to="(VCiv) Retificar autuação" name="(VCiv) Retificar autuação"/>
+        <transition to="(VCiv) Calcular custas" name="(VCiv) Calcular custas"/>
+        <transition to="(VCiv) Apensar processo" name="(VCiv) Apensar processo"/>
+        <transition to="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio" name="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio"/>
+        <transition to="(VCiv) Bacenjud - Aguardando resposta" name="(VCiv) Bacenjud - Aguardando resposta"/>
+        <transition to="(VCiv) Bacenjud - Minutar transferência" name="(VCiv) Bacenjud - Minutar transferência"/>
+        <transition to="(VCiv) Bacenjud - Aguardando resposta de transferência" name="(VCiv) Bacenjud - Aguardando resposta de transferência"/>
+        <transition to="(VCiv) Renajud - Consultar" name="(VCiv) Renajud - Consultar"/>
+        <transition to="(VCiv) Infojud ou Infoseg - Consultar" name="(VCiv) Infojud ou Infoseg - Consultar"/>
+        <transition to="(VCiv) Remetido a outro juízo" name="(VCiv) Remetido a outro juízo"/>
+        <transition to="(VCiv) Cancelar distribuição" name="(VCiv) Cancelar distribuição"/>
+        <transition to="(VCiv) Processos com distribuição cancelada" name="(VCiv) Procescancelamento da distribuiçãosos com distribuição cancelada"/>
+        <transition to="(VCiv) Encaminhar para instância superior - eletronicamente" name="(VCiv) Encaminhar para instância superior - eletronicamente"/>
+        <transition to="(VCiv) Encaminhar para instância superior - fisicamente" name="(VCiv) Encaminhar para instância superior - fisicamente"/>
+        <transition to="(VCiv) Aguardando julgamento da instância superior - fisicamente" name="(VCiv) Aguardando julgamento da instância superior - fisicamente"/>
+        <transition to="(VCiv) Infojud, Infoseg ou TRE - Consultar" name="(VCiv) Infojud, Infoseg ou TRE - Consultar"/>
+        <transition to="(VCiv) Infojud, Infoseg ou TRE - Aguardando resposta" name="(VCiv) Infojud, Infoseg ou TRE - Aguardando resposta"/>
+        <transition to="(VCiv) Aguardando central de cálculos" name="(VCiv) Aguardar central de cálculos"/>
+        <transition to="(VCiv) Processos devolvidos pela central de cálculos" name="(VCiv) Cálculo pronto"/>
+    </task-node>
+    <fork name="(VCiv) Separação em cumprimento de decisão">
+        <transition to="(VCiv) Suspender?" name="(VCiv) Suspender?"/>
+        <transition to="(VCiv) Citar e(ou) intimar?" name="(VCiv) Citar e(ou) intimar?"/>
+        <transition to="(VCiv) Redistribuir?" name="(VCiv) Redistribuir?"/>
+        <transition to="(VCiv) Designar audiência?" name="(VCiv) Designar audiência?"/>
+        <transition to="(VCiv) Aguardar audiência?" name="(VCiv) Aguardar audiência?"/>
+        <transition to="(VCiv) Certificar decurso de prazo?" name="(VCiv) Certificar decurso de prazo?"/>
+        <transition to="(VCiv) Arquivar?" name="(VCiv) Arquivar?"/>
+        <transition to="(VCiv) Certificar trânsito em julgado?" name="(VCiv) Certificar trânsito em julgado?"/>
+        <transition to="(VCiv) Aguardar Laudo Técnico?" name="(VCiv) Aguardar Laudo Técnico?"/>
+        <transition to="(VCiv) Encaminhar para instância superior?" name="(VCiv) Encaminhar para instância superior?"/>
+        <transition to="(VCiv) Retificar autuação?" name="(VCiv) Retificar autuação?"/>
+        <transition to="(VCiv) Calcular custas?" name="(VCiv) Calcular custas?"/>
+        <transition to="(VCiv) Apensar?" name="(VCiv) Apensar?"/>
+        <transition to="(VCiv) Publicar no DJE?" name="(VCiv) Publicar no DJE?"/>
+        <transition to="(VCiv) Expedir Alvará?" name="(VCiv) Expedir Alvará?"/>
+        <transition to="(VCiv) Expedir outros documentos?" name="(VCiv) Expedir outros documentos?"/>
+        <transition to="(VCiv) Expedir Mandado?" name="(VCiv) Expedir Mandado?"/>
+        <transition to="(VCiv) Expedir Carta Precatória?" name="(VCiv) Expedir Carta Precatória?"/>
+        <transition to="(VCiv) Expedir Ofício?" name="(VCiv) Expedir Ofício?"/>
+        <transition to="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio?" name="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio?"/>
+        <transition to="(VCiv) Renajud - Consultar?" name="(VCiv) Renajud - Consultar?"/>
+        <transition to="(VCiv) Infojud ou Infoseg - Consultar?" name="(VCiv) Infojud ou Infoseg - Consultar?"/>
+        <transition to="(VCiv) Aguardar decurso de prazo?" name="(VCiv) Aguardar decurso de prazo?"/>
+        <transition to="(VCiv) Intimar Ministério Público?" name="(VCiv) Intimar Ministério Público?"/>
+        <transition to="(VCiv) Cancelar distribuição?" name="(VCiv) Cancelar distribuição?"/>
+        <transition to="(VCiv) Expedir Carta Rogatória?" name="(VCiv) Expedir Carta Rogatória?"/>
+        <transition to="(VCiv) É controlar retorno de expediente?" name="(VCiv) É controlar retorno de expediente?"/>
+        <transition to="(VCiv) Central de cálculos?" name="(VCiv) Central decálculos?"/>
+    </fork>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:suspender') ? '(VCiv) Suspensão de processo' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Suspender?">
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Suspensão de processo" name="(VCiv) Suspensão de processo"/>
+    </decision>
+    <join name="(VCiv) Junção em cumprimento de decisão">
+        <transition to="Término" name="Término"/>
+    </join>
+    <task-node end-tasks="true" name="(VCiv) Processos suspensos">
+        <task name="(VCiv) Processos suspensos" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Encerrar suspensão do processo"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:citar_intimar') ? '(VCiv) Citar e(ou) intimar' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Citar e(ou) intimar?">
+        <transition to="(VCiv) Citar e(ou) intimar" name="(VCiv) Citar e(ou) intimar"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Citar e(ou) intimar">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:redistribuir') ? '(VCiv) Redistribuir' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Redistribuir?">
+        <transition to="(VCiv) Redistribuir" name="(VCiv) Redistribuir"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Redistribuir">
+        <task name="(VCiv) Redistribuir" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Redistribuir eletronicamente" name="Redistribuir eletronicamente"/>
+        <transition to="(VCiv) Redistribuir fisicamente" name="Redistribuir fisicamente"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Retornar para análise da secretaria"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Redistribuir eletronicamente">
+        <task name="(VCiv) Redistribuir eletronicamente" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_abaRedistribuicaoProcesso" mapped-name="frame:Processo_Fluxo_abaRedistribuicaoProcesso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Ignorar e sair da tarefa"/>
+        <transition to="(VCiv) Redistribuido eletronicamente" name="(VCiv) Redistribuido eletronicamente"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(VCiv) Redistribuido eletronicamente')}"/>
+        </event>
+    </task-node>
+    <process-state name="(VCiv) Redistribuido eletronicamente">
+        <sub-process name="Redistribuíção" binding="late"/>
+        <transition to="(VCiv) Redistribuir eletronicamente" name="(VCiv) Redistribuir eletronicamente"/>
+    </process-state>
+    <task-node end-tasks="true" name="(VCiv) Redistribuir fisicamente">
+        <task name="(VCiv) Redistribuir fisicamente" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Remetido a outro juízo" name="Remeter a outro juízo"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Ignorar redistribuição física"/>
+    </task-node>
+    <process-state name="(VCiv) Arquivar processo">
+        <sub-process name="(VCiv) Arquivamento" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:designar_audiencia') ? '(VCiv) Designar audiência' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Designar audiência?">
+        <transition to="(VCiv) Designar audiência" name="(VCiv) Designar audiência"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Designar audiência">
+        <task name="(VCiv) Designar audiência" swimlane="Conciliação">
+            <controller>
+                <variable name="Processo_Fluxo_abaDesignarAudiencia" mapped-name="frame:Processo_Fluxo_abaDesignarAudiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="(VCiv) Citar e(ou) intimar da audiência" name="Citar e(ou) intimar da audiência"/>
+        <transition to="(VCIv) Encaminhar para o CEJUSC" name="Encaminhar para o CEJUSC">
+            <condition expression="#{' 27 32 30 48 19 20 21 37 43 51 '.contains(' '.concat(tramitacaoProcessualService.recuperaProcesso().orgaoJulgador.idOrgaoJulgador).concat(' '))}"/>
+        </transition>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:aguardar_audiencia') ? '(VCiv) Audiência designada' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Aguardar audiência?">
+        <transition to="(VCiv) Audiência designada" name="(VCiv) Audiência designada"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Audiência designada">
+        <task name="(VCiv) Audiência designada" swimlane="Conciliação">
+            <controller>
+                <variable name="Processo_Fluxo_abaDesignarAudiencia" mapped-name="frame:Processo_Fluxo_abaDesignarAudiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="(VCiv) Designar audiência" name="Designar uma nova audiência"/>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:certificar_decurso') ? '(VCiv) Certificação de decurso de prazo' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Certificar decurso de prazo?">
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Certificação de decurso de prazo" name="(VCiv) Certificação de decurso de prazo"/>
+    </decision>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:arquivar') ? '(VCiv) Arquivar processo' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Arquivar?">
+        <transition to="(VCiv) Arquivar processo" name="(VCiv) Arquivar processo"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:certificar_transito') ? '(VCiv) Certificação de trânsito em julgado' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Certificar trânsito em julgado?">
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Certificação de trânsito em julgado" name="(VCiv) Certificação de trânsito em julgado"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardar Laudo Técnico">
+        <task name="(VCiv) Aguardar Laudo Técnico" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:aguardar_laudo_tecnico') ? '(VCiv) Aguardar Laudo Técnico' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Aguardar Laudo Técnico?">
+        <transition to="(VCiv) Aguardar Laudo Técnico" name="(VCiv) Aguardar Laudo Técnico"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:encaminhar_instancia_superior') ? '(VCiv) Encaminhar para instância superior' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Encaminhar para instância superior?">
+        <transition to="(VCiv) Encaminhar para instância superior" name="(VCiv) Encaminhar para instância superior"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Encaminhar para instância superior">
+        <task name="(VCiv) Encaminhar para instância superior" swimlane="Secretaria">
+            <controller/>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Ignorar envio à instância superior"/>
+        <transition to="(VCiv) Encaminhar para instância superior - eletronicamente" name="Encaminhar para instância superior - eletronicamente">
+            <condition expression="#{processoTrfHome.possuiCompetencia(10) || ' 101 2 14 15 82 '.contains(' '.concat(tramitacaoProcessualService.recuperaProcesso().orgaoJulgador.idOrgaoJulgador).concat(' '))}"/>
+        </transition>
+        <transition to="(VCiv) Encaminhar para instância superior - fisicamente" name="Encaminhar para instância superior - fisicamente"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Aguardando julgamento da instância superior - eletronicamente">
+        <task name="(VCiv) Aguardando julgamento da instância superior - eletronicamente" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(123).comComplementoDeCodigo(7).doTipoLivre().preencherComTexto('Turma Recursal').comComplementoDeCodigo(18).doTipoDominio().preencherComElementoDeCodigo(motivoRemessa.codigoGlossario).lancarMovimento()}"/>
+        </event>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:retificar_autuacao') ? '(VCiv) Retificar autuação' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Retificar autuação?">
+        <transition to="(VCiv) Retificar autuação" name="(VCiv) Retificar autuação"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Retificar autuação">
+        <task name="(VCiv) Retificar autuação" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_RetificacaoAutuacao_updateRetificacaoAutuacao" mapped-name="page:Processo_RetificacaoAutuacao_updateRetificacaoAutuacao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <event type="task-end">
+            <action expression="#{preencherMovimento.deCodigo(10966).comComplementoDeCodigo(22).doTipoLivre().preencherComTexto(processoHistoricoClasseHome.instance.classeJudicialAnterior).comComplementoDeCodigo(22).doTipoLivre().preencherComTexto(processoHistoricoClasseHome.instance.classeJudicialAtual).lancarMovimento()}"/>
+        </event>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:calcular_custas') ? '(VCiv) Calcular custas' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Calcular custas?">
+        <transition to="(VCiv) Calcular custas" name="(VCiv) Calcular custas"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Calcular custas">
+        <task name="(VCiv) Calcular custas" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:apensar') ? '(VCiv) Apensar processo' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Apensar?">
+        <transition to="(VCiv) Apensar processo" name="(VCiv) Apensar processo"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Apensar processo">
+        <task name="(VCiv) Apensar processo" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_associarProcessos" mapped-name="frame:Processo_Fluxo_associarProcessos" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:publicar_dje') ? '(VCiv) Publicação no DJE' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Publicar no DJE?">
+        <transition to="(VCiv) Publicação no DJE" name="(VCiv) Publicação no DJE"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Publicação no DJE">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:expedir_alvara') ? '(VCiv) Expedição de Alvará' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Expedir Alvará?">
+        <transition to="(VCiv) Expedição de Alvará" name="(VCiv) Expedição de Alvará"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Expedição de Alvará">
+        <sub-process name="(VCiv) Elaborar Documentos" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_alvara', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_oficio', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_outros_documentos', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_transito', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_decurso', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:expedir_outros_documentos') ? '(VCiv) Expedição de outros documentos' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Expedir outros documentos?">
+        <transition to="(VCiv) Expedição de outros documentos" name="(VCiv) Expedição de outros documentos"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Expedição de outros documentos">
+        <sub-process name="(VCiv) Elaborar Documentos" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_outros_documentos', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_alvara', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_oficio', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_transito', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_decurso', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:expedir_mandado') ? '(VCiv) Expedição de Mandado' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Expedir Mandado?">
+        <transition to="(VCiv) Expedição de Mandado" name="(VCiv) Expedição de Mandado"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Expedição de Mandado">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:expedir_carta_precatoria') ? '(VCiv) Expedição de Carta Precatória' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Expedir Carta Precatória?">
+        <transition to="(VCiv) Expedição de Carta Precatória" name="(VCiv) Expedição de Carta Precatória"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Expedição de Carta Precatória">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:expedir_oficio') ? '(VCiv) Expedição de Ofício' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Expedir Ofício?">
+        <transition to="(VCiv) Expedição de Ofício" name="(VCiv) Expedição de Ofício"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Expedição de Ofício">
+        <sub-process name="(VCiv) Elaborar Documentos" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_oficio', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_alvara', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_outros_documentos', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_transito', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_decurso', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:bacenjud_minutar') ? '(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio?">
+        <description><![CDATA[]]></description>
+        <transition to="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio" name="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio">
+        <task name="(VCiv) Bacenjud - Minutar bloqueio ou desbloqueio" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Bacenjud - Aguardando resposta" name="Aguardar resposta"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Bacenjud - Aguardando resposta">
+        <task name="(VCiv) Bacenjud - Aguardando resposta" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Bacenjud - Minutar transferência" name="Minutar transferência"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Bacenjud - Minutar transferência">
+        <task name="(VCiv) Bacenjud - Minutar transferência" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Bacenjud - Aguardando resposta de transferência" name="Aguardar resposta de transferência"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Bacenjud - Aguardando resposta de transferência">
+        <task name="(VCiv) Bacenjud - Aguardando resposta de transferência" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:renajud_consultar') ? '(VCiv) Renajud - Consultar' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Renajud - Consultar?">
+        <transition to="(VCiv) Renajud - Consultar" name="(VCiv) Renajud - Consultar"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Renajud - Consultar">
+        <task name="(VCiv) Renajud - Consultar" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <description><![CDATA[]]></description>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:infojud_infoseg_consultar') ? '(VCiv) Infojud, Infoseg ou TRE - Consultar' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Infojud ou Infoseg - Consultar?">
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Infojud, Infoseg ou TRE - Consultar" name="(VCiv) Infojud, Infoseg ou TRE - Consultar"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Infojud ou Infoseg - Consultar">
+        <task name="(VCiv) Infojud ou Infoseg - Consultar" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Infojud, Infoseg ou TRE - Consultar">
+        <task name="(VCiv) Infojud, Infoseg ou TRE - Consultar" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar"/>
+        <transition to="(VCiv) Infojud, Infoseg ou TRE - Aguardando resposta" name="Aguardar resposta"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Infojud, Infoseg ou TRE - Aguardando resposta">
+        <task name="(VCiv) Infojud, Infoseg ou TRE - Aguardando resposta" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <process-state name="(VCiv) Citar e(ou) intimar da audiência">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Audiência designada" name="(VCiv) Audiência designada"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+    </process-state>
+    <process-state name="(VCiv) Certificação de trânsito em julgado">
+        <sub-process name="(VCiv) Elaborar Documentos" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_transito', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_outros_documentos', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_alvara', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_oficio', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_decurso', false)}"/>
+        </event>
+    </process-state>
+    <process-state name="(VCiv) Certificação de decurso de prazo">
+        <sub-process name="(VCiv) Elaborar Documentos" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_decurso', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:certificar_transito', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_outros_documentos', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_alvara', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_oficio', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:aguardar_decurso_prazo') ? '(VCiv) Aguardar decurso de prazo' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Aguardar decurso de prazo?">
+        <description><![CDATA[]]></description>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Aguardar decurso de prazo" name="(VCiv) Aguardar decurso de prazo"/>
+    </decision>
+    <process-state name="(VCiv) Aguardar decurso de prazo">
+        <sub-process name="(VCiv) Controle de Prazos" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </process-state>
+    <task-node end-tasks="true" name="(VCiv) Remetido a outro juízo">
+        <task name="(VCiv) Remetido a outro juízo" swimlane="Secretaria">
+            <controller/>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <event type="task-start">
+            <action expression="#{preencherMovimento.deCodigo(123).comComplementoDeCodigo(7).doTipoLivre().preencherComTexto('a outro juízo').comComplementoDeCodigo(18).doTipoDominio().preencherComElementoDeCodigo(40).lancarMovimento()}"/>
+        </event>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:intimar_mp') ? '(VCiv) Intimação Ministério Público' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Intimar Ministério Público?">
+        <description><![CDATA[]]></description>
+        <transition to="(VCiv) Intimação Ministério Público" name="(VCiv) Intimação Ministério Público"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Intimação Ministério Público">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+    </process-state>
+    <process-state name="(VCiv) Suspensão de processo">
+        <sub-process name="(VCiv) Controle de suspensão" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:cancelar_distribuicao') ? '(VCiv) Cancelar distribuição' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Cancelar distribuição?">
+        <transition to="(VCiv) Cancelar distribuição" name="(VCiv) Cancelar distribuição"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Cancelar distribuição">
+        <task name="(VCiv) Cancelar distribuição" swimlane="Secretaria"/>
+        <transition to="(VCiv) Processos com distribuição cancelada" name="Efetuar cancelamento da distribuição"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Ignorar cancelamento da distribuição"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Processos com distribuição cancelada">
+        <task name="(VCiv) Processos com distribuição cancelada" swimlane="Secretaria"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Abortar cancelamento da distribuição"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(488).lancarMovimento()}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Encaminhar para instância superior - eletronicamente">
+        <task name="(VCiv) Encaminhar para instância superior - eletronicamente" swimlane="Secretaria">
+            <controller>
+                <variable name="Intercomunicacao_RetificacaoAutuacao_updateRetificacaoAutuacao" mapped-name="frame:Intercomunicacao_RetificacaoAutuacao_updateRetificacaoAutuacao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Ignorar envio para instância superior eletronicamente"/>
+        <transition to="(VCiv) Aguardando julgamento da instância superior - eletronicamente" name="(VCiv) Aguardando julgamento da instância superior - eletronicamente">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(VCiv) Aguardando julgamento da instância superior - eletronicamente')}"/>
+        </event>
+        <event type="task-start">
+            <action expression="#{taskInstanceUtil.setVariable('comboMotivoRemessa','18;37,38,39,40,90')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Encaminhar para instância superior - fisicamente">
+        <task name="(VCiv) Encaminhar para instância superior - fisicamente" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Aguardando julgamento da instância superior - fisicamente" name="Aguardar julgamento da instância superior - fisicamente"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Aguardando julgamento da instância superior - fisicamente">
+        <task name="(VCiv) Aguardando julgamento da instância superior - fisicamente" swimlane="Secretaria"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(123).comComplementoDeCodigo(7).doTipoLivre().preencherComTexto('instância superior').comComplementoDeCodigo(18).doTipoLivre().preencherComTexto('em grau de recurso').lancarMovimento()}"/>
+        </event>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:expedir_carta_rogatoria') ? '(VCiv) Expedição de Carta Rogatória' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Expedir Carta Rogatória?">
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Expedição de Carta Rogatória" name="(VCiv) Expedição de Carta Rogatória"/>
+    </decision>
+    <process-state name="(VCiv) Expedição de Carta Rogatória">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_mandado', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cumpridec:controlar_retorno_expediente') ? '(VCiv) Controle de retorno de expedientes' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) É controlar retorno de expediente?">
+        <transition to="(VCiv) Controle de retorno de expedientes" name="(VCiv) Controle de retorno de expedientes"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(VCiv) Controle de retorno de expedientes">
+        <sub-process name="(VCiv) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+    </process-state>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('vciv:fbc:aguardar_central_calculos') ? '(VCiv) Aguardando central de cálculos' : '(VCiv) Junção em cumprimento de decisão'}" name="(VCiv) Central de cálculos?">
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="(VCiv) Junção em cumprimento de decisão"/>
+        <transition to="(VCiv) Aguardando central de cálculos" name="(VCiv) Aguardando central de cálculos"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando central de cálculos">
+        <task name="(VCiv) Aguardando central de cálculos" swimlane="Secretaria e Servidor de cálculo">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Ignorar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Processos devolvidos pela central de cálculos" name="Devolver para a secretária"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Processos devolvidos pela central de cálculos">
+        <task name="(VCiv) Processos devolvidos pela central de cálculos" swimlane="Secretaria"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Cumprimento de decisão" name="Nó de Desvio - (VCiv) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <process-state name="(VCIv) Encaminhar para o CEJUSC">
+        <sub-process name="(VCiv) Controle do CEJUSC" binding="late"/>
+        <transition to="(VCiv) Junção em cumprimento de decisão" name="Finalizar e sair da tarefa"/>
+    </process-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

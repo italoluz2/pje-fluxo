@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="Preparar Ato Judicial de Despacho Inicial">
+    <description><![CDATA[Preparar Ato Judicial de Despacho Inicial.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Assessor">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:5197,6:1469,8:1338')}" actor-id="#{actor.id}"/>
+    </swimlane>
+    <swimlane name="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:5197,6:1469,8:1338')}"/>
+    </swimlane>
+    <swimlane name="Magistrado">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('6:1469,8:1338')}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Assessor"/>
+        <transition to="Minutar ato de despacho inicial" name="Minutar ato de despacho inicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('MovimentosLancadosTemporariamente')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('AgrupamentosLancadosTemporariamente')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('minutaEmElaboracao')}"/>
+        </event>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="Minutar ato de despacho inicial">
+        <task name="Minutar ato de despacho inicial" swimlane="Assessor">
+            <controller>
+                <variable name="minuta_ato_judicial" mapped-name="textEditCombo:minuta_ato_judicial" access="read"/>
+                <variable name="MovimentarLote" mapped-name="movimentarLote:MovimentarLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Confirmar ato de despacho inicial" name="Encaminhar para assinatura">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial" name="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Encaminhar de despacho inicial para novo fluxo (TR)" name="Encaminhar para o novo fluxo"/>
+        <event type="node-enter">
+            <action name="upd" expression="#{tipoDocumento.set('minuta_ato_judicial',62,63,64)}"/>
+            <action name="upd" expression="#{modeloDocumento.set('minuta_ato_judicial',85,86,75,76)}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{org.jboss.seam.bpm.processInstance.contextInstance.setVariable('minutaEmElaboracao', processoHome.idProcessoDocumento)}"/>
+        </event>
+        <event type="task-start">
+            <action name="Condicao do lancamento temporario de movimentos" expression="#{lancadorMovimentosService.setCondicaoLancamentoMovimentosTemporarioNoFluxo('#{true}')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Confirmar ato de despacho inicial">
+        <task name="Confirmar ato de despacho inicial" swimlane="Magistrado">
+            <controller>
+                <variable name="Processo_Fluxo_revisarMinuta" mapped-name="frame:Processo_Fluxo_revisarMinuta" access="read,write"/>
+                <variable name="AssinaturaEmLote" mapped-name="assinarLote:AssinaturaEmLote" access="read,write"/>
+                <variable name="confirmarMovimentacao" mapped-name="homologadorEventoTree:confirmarMovimentacao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial" name="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Minutar ato de despacho inicial" name="Retornar para minutar"/>
+        <transition to="Término" name="Término">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="node-enter">
+            <action name="upd" expression="#{tipoDocumento.set('Processo_Fluxo_revisarMinuta',62,63,64)}"/>
+            <action name="upd" expression="#{modeloDocumento.set('Processo_Fluxo_revisarMinuta',85,86,75,76)}"/>
+        </event>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Término')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Confirmar movimentação de despacho inicial">
+        <task name="Confirmar movimentação de despacho inicial" swimlane="Assessor">
+            <controller>
+                <variable name="confirmarmovimentacao" mapped-name="homologadorEventoTree:confirmarmovimentacao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Término" name="Concluir ato judicial de despacho inicial"/>
+        <transition to="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial" name="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-start">
+            <action expression="#{lancadorMovimentosService.setCondicaoLancamentoMovimentosTemporarioNoFluxo('#{false}')}"/>
+        </event>
+    </task-node>
+    <end-state name="Término">
+        <event type="node-enter">
+            <action expression="#{lancadorMovimentosService.setCondicaoLancamentoMovimentosTemporarioNoFluxo('#{false}')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('MovimentosLancadosTemporariamente')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('AgrupamentosLancadosTemporariamente')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('minutaEmElaboracao')}"/>
+        </event>
+    </end-state>
+    <task-node end-tasks="true" name="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial">
+        <task name="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial" swimlane="Nó de Desvio - Preparar Ato Judicial de Despacho Inicial"/>
+        <transition to="Término" name="Término"/>
+        <transition to="Minutar ato de despacho inicial" name="Minutar ato de despacho inicial"/>
+        <transition to="Confirmar ato de despacho inicial" name="Confirmar ato de despacho inicial"/>
+        <transition to="Confirmar movimentação de despacho inicial" name="Confirmar movimentação de despacho inicial"/>
+    </task-node>
+    <process-state name="Encaminhar de despacho inicial para novo fluxo (TR)">
+        <sub-process name="(TR) Fluxo Básico Geral" binding="late"/>
+        <transition to="Minutar ato de despacho inicial" name="Minutar ato de despacho inicial"/>
+    </process-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Cancelamento de distribuição">
+    <description><![CDATA[Fluxo para cancelamento da distribuição de processo.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Cancelamento de distribuição"/>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) Cancelar distribuição" name="(TR) Cancelar distribuição"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="(TR) Cancelar distribuição">
+        <task name="(TR) Cancelar distribuição" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Cancelamento de distribuição" name="Nó de Desvio - (TR) Cancelamento de distribuição">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de distribuição cancelada" name="Cancelar a distribuição definitivamente"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <node name="(TR) Lançar movimento de distribuição cancelada">
+        <transition to="(TR) Processos com distribuição cancelada" name="(TR) Processos com distribuição cancelada"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(488).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Processos com distribuição cancelada">
+        <task name="(TR) Processos com distribuição cancelada" swimlane="Secretaria"/>
+        <transition to="Término" name="Cancelar e sair da tarefa">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Nó de Desvio - (TR) Cancelamento de distribuição" name="Nó de Desvio - (TR) Cancelamento de distribuição">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Cancelamento de distribuição">
+        <task name="Nó de Desvio - (TR) Cancelamento de distribuição" swimlane="Nó de Desvio - (TR) Cancelamento de distribuição"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Cancelar distribuição" name="(TR) Cancelar distribuição"/>
+        <transition to="(TR) Processos com distribuição cancelada" name="(TR) Processos com distribuição cancelada"/>
+    </task-node>
+    <end-state name="Término"/>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

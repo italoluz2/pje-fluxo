@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Redistribuição">
+    <description><![CDATA[Controle de redistribuição de processos...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Redistribuição"/>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) Redistribuir processo" name="(TR) Redistribuir processo"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="(TR) Redistribuir processo">
+        <task name="(TR) Redistribuir processo" swimlane="Secretaria">
+            <controller/>
+        </task>
+        <transition to="Nó de Desvio - (TR) Redistribuição" name="Nó de Desvio - (TR) Redistribuição">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Redistribuídos fisicamente" name="Redistribuir fisicamente"/>
+        <transition to="(TR) Redistribuir eletronicamente" name="Redistribuir eletronicamente"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Redistribuídos fisicamente">
+        <task name="(TR) Redistribuídos fisicamente" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Redistribuição" name="Nó de Desvio - (TR) Redistribuição">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Redistribuir processo" name="Retornar para escolha de outro tipo de redistribuição"/>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Remetidos à outro juízo">
+        <task name="(TR) Remetidos à outro juízo" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Redistribuição" name="Nó de Desvio - (TR) Redistribuição">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Redistribuir eletronicamente">
+        <task name="(TR) Redistribuir eletronicamente" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_abaRedistribuicaoProcesso" mapped-name="frame:Processo_Fluxo_abaRedistribuicaoProcesso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Redistribuição" name="Nó de Desvio - (TR) Redistribuição">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Processos redistribuídos eletronicamente" name="(TR) Processos redistribuídos eletronicamente">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Redistribuir processo" name="Retornar para escolha de outro tipo de redistribuição"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Processos redistribuídos eletronicamente')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Processos redistribuídos eletronicamente">
+        <task name="(TR) Processos redistribuídos eletronicamente" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso_redist" mapped-name="textAlert:aviso_redist" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (TR) Redistribuição" name="Nó de Desvio - (TR) Redistribuição">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Redistribuição">
+        <task name="Nó de Desvio - (TR) Redistribuição" swimlane="Nó de Desvio - (TR) Redistribuição"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Redistribuir processo" name="(TR) Redistribuir processo"/>
+        <transition to="(TR) Redistribuídos fisicamente" name="(TR) Redistribuídos fisicamente"/>
+        <transition to="(TR) Remetidos à outro juízo" name="(TR) Remetidos à outro juízo"/>
+        <transition to="(TR) Redistribuir eletronicamente" name="(TR) Redistribuir eletronicamente"/>
+        <transition to="(TR) Processos redistribuídos eletronicamente" name="(TR) Processos redistribuídos eletronicamente"/>
+    </task-node>
+    <end-state name="Término"/>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

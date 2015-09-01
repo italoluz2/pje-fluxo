@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Arquivamento">
+    <description><![CDATA[Controle de arquivamento de processos...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Arquivamento"/>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) Arquivar processo" name="(TR) Arquivar processo"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="(TR) Arquivar processo">
+        <task name="(TR) Arquivar processo" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Arquivamento" name="Nó de Desvio - (TR) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento arquivo definitivo" name="Arquivar definitivamente"/>
+        <transition to="(TR) Lançar movimento arquivo provisório" name="Arquivar provisoriamente"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <node name="(TR) Lançar movimento arquivo definitivo">
+        <transition to="(TR) Arquivados definitivamente" name="(TR) Arquivados definitivamente"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(246).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Arquivados definitivamente">
+        <task name="(TR) Arquivados definitivamente" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Arquivamento" name="Nó de Desvio - (TR) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Conclusão para decisão de reativação" name="Enviar concluso para decisão de reativação"/>
+    </task-node>
+    <process-state name="(TR) Conclusão para decisão de reativação">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Despachados sobre reativação" name="(TR) Despachados sobre reativação"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_reativacao','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_reativacao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="(TR) Despachados sobre reativação">
+        <task name="(TR) Despachados sobre reativação" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Arquivamento" name="Nó de Desvio - (TR) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de reativação" name="Reativar o processo"/>
+        <transition to="(TR) Arquivados definitivamente" name="Manter o processo arquivado"/>
+    </task-node>
+    <node name="(TR) Lançar movimento de reativação">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(849).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="(TR) Lançar movimento arquivo provisório">
+        <transition to="(TR) Arquivados provisoriamente" name="(TR) Arquivados provisoriamente"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(245).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Arquivados provisoriamente">
+        <task name="(TR) Arquivados provisoriamente" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Arquivamento" name="Nó de Desvio - (TR) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de desarquivamento" name="Cancelar arquivamento e sair da tarefa"/>
+    </task-node>
+    <node name="(TR) Lançar movimento de desarquivamento">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(893).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Arquivamento">
+        <task name="Nó de Desvio - (TR) Arquivamento" swimlane="Nó de Desvio - (TR) Arquivamento"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Arquivar processo" name="(TR) Arquivar processo"/>
+        <transition to="(TR) Arquivados definitivamente" name="(TR) Arquivados definitivamente"/>
+        <transition to="(TR) Despachados sobre reativação" name="(TR) Despachados sobre reativação"/>
+        <transition to="(TR) Arquivados provisoriamente" name="(TR) Arquivados provisoriamente"/>
+    </task-node>
+    <end-state name="Término"/>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

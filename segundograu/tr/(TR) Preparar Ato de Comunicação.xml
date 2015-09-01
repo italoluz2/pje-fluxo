@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Preparar Ato de Comunicação">
+    <description><![CDATA[Permite a expedição de cartas de citação, intimação, possibilitando utilizar meios como mandado, diário da justiça, etc...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Preparar Ato de Comunicação"/>
+    <swimlane name="Secretaria e Magistrado">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('6:1469,8:1338,8:5483')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) É citação e(ou) intimação via sistema ou correios?" name="(TR) É citação e(ou) intimação via sistema ou correios?"/>
+    </start-state>  
+    <!-- NODES -->
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:pac:citar_intimar') ? '(TR) Preparar citação e(ou) intimação via sistema ou correios' : '(TR) É intimação ao Ministério Público?'}" name="(TR) É citação e(ou) intimação via sistema ou correios?">
+        <transition to="(TR) Preparar citação e(ou) intimação via sistema ou correios" name="(TR) Preparar citação e(ou) intimação via sistema ou correios"/>
+        <transition to="(TR) É intimação ao Ministério Público?" name="(TR) É intimação ao Ministério Público?"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Preparar citação e(ou) intimação via sistema ou correios">
+        <task name="(TR) Preparar citação e(ou) intimação via sistema ou correios" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_prepararExpediente" mapped-name="frame:Processo_Fluxo_prepararExpediente" access="read,write"/>
+                <variable name="aviso_meio_sistema" mapped-name="textAlert:aviso_meio_sistema" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Separação em citação e(ou) intimação via sistema ou correios" name="(TR) Separação em citação e(ou) intimação via sistema ou correios">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Separação em citação e(ou) intimação via sistema ou correios')}"/>
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action name="upd" expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('E,C')}"/>
+        </event>
+    </task-node>
+    <fork name="(TR) Separação em citação e(ou) intimação via sistema ou correios">
+        <transition to="(TR) É via sistema?" name="(TR) É via sistema?"/>
+        <transition to="(TR) É via correios?" name="(TR) É via correios?"/>
+    </fork>
+    <decision expression="#{comunicacaoProcessualAction.getExpedientesEletronico().size() &gt; 0 ? '(TR) Lançar movimento de expedição de outros documentos' : '(TR) Junção em citação e(ou) intimação'}" name="(TR) É via sistema?">
+        <transition to="(TR) Lançar movimento de expedição de outros documentos" name="(TR) Lançar movimento de expedição de outros documentos"/>
+        <transition to="(TR) Junção em citação e(ou) intimação" name="(TR) Junção em citação e(ou) intimação"/>
+    </decision>
+    <node name="(TR) Lançar movimento de expedição de outros documentos">
+        <transition to="(TR) Controlar prazos via sistema" name="(TR) Controlar prazos via sistema"/>
+        <event type="node-enter">
+            <action expression="#{comunicacaoProcessualAction.enviarExpedientesLancarMovimentos('E', 'processoExpedienteAtual','#{preencherMovimento.deCodigo(60).associarAoDocumento(processoExpedienteAtual.getProcessoDocumento()).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(80).lancarMovimento()}')}"/>
+        </event>
+    </node>
+    <process-state name="(TR) Controlar prazos via sistema">
+        <sub-process name="(TR) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="(TR) Junção em citação e(ou) intimação" name="(TR) Junção em citação e(ou) intimação"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cpre:sistema','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cpre:sistema')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{comunicacaoProcessualAction.getExpedientesCorreios().size() &gt; 0 ? '(TR) Lançar movimento de expedição de AR' : '(TR) Junção em citação e(ou) intimação'}" name="(TR) É via correios?">
+        <transition to="(TR) Lançar movimento de expedição de AR" name="(TR) Lançar movimento de expedição de AR"/>
+        <transition to="(TR) Junção em citação e(ou) intimação" name="(TR) Junção em citação e(ou) intimação"/>
+    </decision>
+    <node name="(TR) Lançar movimento de expedição de AR">
+        <transition to="(TR) Imprimir expediente via correios" name="(TR) Imprimir expediente via correios"/>
+        <event type="node-enter">
+            <action expression="#{comunicacaoProcessualAction.enviarExpedientesLancarMovimentos('C', 'processoExpedienteAtual','#{preencherMovimento.deCodigo(60).associarAoDocumento(processoExpedienteAtual.getProcessoDocumento()).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(74).lancarMovimento()}')}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Imprimir expediente via correios">
+        <task name="(TR) Imprimir expediente via correios" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_expedientes_correios" mapped-name="frame:Processo_Fluxo_expedientes_correios" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Controlar prazos via correios" name="Aguardar retorno do AR"/>
+    </task-node>
+    <process-state name="(TR) Controlar prazos via correios">
+        <sub-process name="(TR) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="(TR) Junção em citação e(ou) intimação" name="(TR) Junção em citação e(ou) intimação"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cpre:correios','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cpre:correios')}"/>
+        </event>
+    </process-state>
+    <join name="(TR) Junção em citação e(ou) intimação">
+        <transition to="Término" name="Término"/>
+    </join>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:pac:intimar_MP') ? '(TR) Intimar Ministério Público' : '(TR) É expedir carta precatória?'}" name="(TR) É intimação ao Ministério Público?">
+        <transition to="(TR) Intimar Ministério Público" name="(TR) Intimar Ministério Público"/>
+        <transition to="(TR) É expedir carta precatória?" name="(TR) É expedir carta precatória?"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Intimar Ministério Público">
+        <task name="(TR) Intimar Ministério Público" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_prepararExpediente" mapped-name="frame:Processo_Fluxo_prepararExpediente" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de expedição outros documentos" name="(TR) Lançar movimento de expedição outros documentos">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Lançar movimento de expedição outros documentos')}"/>
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action name="upd" expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('E,C')}"/>
+        </event>
+    </task-node>
+    <node name="(TR) Lançar movimento de expedição outros documentos">
+        <transition to="(TR) Controlar prazos via MP" name="(TR) Controlar prazos via MP"/>
+        <event type="node-enter">
+            <action expression="#{comunicacaoProcessualAction.enviarExpedientesLancarMovimentos('E', 'processoExpedienteAtual','#{preencherMovimento.deCodigo(60).associarAoDocumento(processoExpedienteAtual.getProcessoDocumento()).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(80).lancarMovimento()}')}"/>
+        </event>
+    </node>
+    <process-state name="(TR) Controlar prazos via MP">
+        <sub-process name="(TR) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cpre:MP','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cpre:MP')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:pac:carta_precatoria') ? '(TR) Expedir carta precatória' : '(TR) É expedir carta rogatória?'}" name="(TR) É expedir carta precatória?">
+        <transition to="(TR) Expedir carta precatória" name="(TR) Expedir carta precatória"/>
+        <transition to="(TR) É expedir carta rogatória?" name="(TR) É expedir carta rogatória?"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Expedir carta precatória">
+        <task name="(TR) Expedir carta precatória" swimlane="Secretaria e Magistrado">
+            <controller>
+                <variable name="Processo_Fluxo_prepararExpediente" mapped-name="frame:Processo_Fluxo_prepararExpediente" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de expedição de carta precatória" name="(TR) Lançar movimento de expedição de carta precatória">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Lançar movimento de expedição de carta precatória')}"/>
+            <action expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('L')}"/>
+        </event>
+    </task-node>
+    <node name="(TR) Lançar movimento de expedição de carta precatória">
+        <transition to="(TR) Controlar prazos via carta" name="(TR) Controlar prazos via carta"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(60).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(76).associarAoDocumentoDeId(processoHome.idProcessoDocumento).lancarMovimento()}"/>
+        </event>
+    </node>
+    <process-state name="(TR) Controlar prazos via carta">
+        <sub-process name="(TR) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cpre:carta','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cpre:carta')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:pac:carta_rogatoria') ? '(TR) Expedir carta rogatória' : '(TR) É expedir mandado?'}" name="(TR) É expedir carta rogatória?">
+        <transition to="(TR) Expedir carta rogatória" name="(TR) Expedir carta rogatória"/>
+        <transition to="(TR) É expedir mandado?" name="(TR) É expedir mandado?"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Expedir carta rogatória">
+        <task name="(TR) Expedir carta rogatória" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_prepararExpediente" mapped-name="frame:Processo_Fluxo_prepararExpediente" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de expedição de carta rogatória" name="(TR) Lançar movimento de expedição de carta rogatória">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Lançar movimento de expedição de carta rogatória')}"/>
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('L')}"/>
+        </event>
+    </task-node>
+    <node name="(TR) Lançar movimento de expedição de carta rogatória">
+        <transition to="(TR) Controlar prazos via carta" name="(TR) Controlar prazos via carta"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(60).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(77).associarAoDocumentoDeId(processoHome.idProcessoDocumento).lancarMovimento()}"/>
+        </event>
+    </node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:pac:mandado') ? '(TR) Expedir mandado' : '(TR) É publicar no DJe?'}" name="(TR) É expedir mandado?">
+        <transition to="(TR) Expedir mandado" name="(TR) Expedir mandado"/>
+        <transition to="(TR) É publicar no DJe?" name="(TR) É publicar no DJe?"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Expedir mandado">
+        <task name="(TR) Expedir mandado" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_prepararExpediente" mapped-name="frame:Processo_Fluxo_prepararExpediente" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Existe alguma central?" name="(TR) Existe alguma central?">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Existe alguma central?')}"/>
+            <action expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('M')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{conectorMandados.haVariasCentraisMandado() ? '(TR) Selecionar central de mandados' : '(TR) Encaminhar e lançar movimento de expedição de mandado'}" name="(TR) Existe alguma central?">
+        <transition to="(TR) Selecionar central de mandados" name="(TR) Selecionar central de mandados"/>
+        <transition to="(TR) Encaminhar e lançar movimento de expedição de mandado" name="(TR) Encaminhar e lançar movimento de expedição de mandado"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Selecionar central de mandados">
+        <task name="(TR) Selecionar central de mandados" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_expedientes_centralmandados" mapped-name="frame:Processo_Fluxo_expedientes_centralmandados" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Encaminhar e lançar movimento de expedição de mandado" name="(TR) Encaminhar e lançar movimento de expedição de mandado"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Encaminhar e lançar movimento de expedição de mandado')}"/>
+        </event>
+    </task-node>
+    <node name="(TR) Encaminhar e lançar movimento de expedição de mandado">
+        <transition to="(TR) Controlar prazos via mandado" name="(TR) Controlar prazos via mandado"/>
+        <event type="node-enter">
+            <action expression="#{comunicacaoProcessualAction.enviarExpedientesLancarMovimentos('M', 'processoExpedienteAtual','#{preencherMovimento.deCodigo(60).associarAoDocumento(processoExpedienteAtual.getProcessoDocumento()).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(78).lancarMovimento()}')}"/>
+        </event>
+    </node>
+    <process-state name="(TR) Controlar prazos via mandado">
+        <sub-process name="(TR) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cpre:mandado','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cpre:mandado')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:pac:publicar_dje') ? '(TR) Preparar expedientes para o DJe' : 'Término'}" name="(TR) É publicar no DJe?">
+        <transition to="(TR) Preparar expedientes para o DJe" name="(TR) Preparar expedientes para o DJe"/>
+        <transition to="Término" name="Término"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Preparar expedientes para o DJe">
+        <task name="(TR) Preparar expedientes para o DJe" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_expedientes_diario" mapped-name="frame:Processo_Fluxo_expedientes_diario" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Preparar relação para o DJe" name="(TR) Preparar relação para o DJe">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Preparar relação para o DJe')}"/>
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action name="upd" expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('P')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Preparar relação para o DJe">
+        <task name="(TR) Preparar relação para o DJe" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Aguardando publicação no DJe" name="Aguardar publicação no DJe"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Aguardando publicação no DJe">
+        <task name="(TR) Aguardando publicação no DJe" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Preparar Ato de Comunicação" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Preparar Ato de Comunicação">
+        <task name="Nó de Desvio - (TR) Preparar Ato de Comunicação" swimlane="Nó de Desvio - (TR) Preparar Ato de Comunicação"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Preparar citação e(ou) intimação via sistema ou correios" name="(TR) Preparar citação e(ou) intimação via sistema ou correios"/>
+        <transition to="(TR) Imprimir expediente via correios" name="(TR) Imprimir expediente via correios"/>
+        <transition to="(TR) Intimar Ministério Público" name="(TR) Intimar Ministério Público"/>
+        <transition to="(TR) Expedir carta precatória" name="(TR) Expedir carta precatória"/>
+        <transition to="(TR) Expedir carta rogatória" name="(TR) Expedir carta rogatória"/>
+        <transition to="(TR) Expedir mandado" name="(TR) Expedir mandado"/>
+        <transition to="(TR) Selecionar central de mandados" name="(TR) Selecionar central de mandados"/>
+        <transition to="(TR) Preparar expedientes para o DJe" name="(TR) Preparar expedientes para o DJe"/>
+        <transition to="(TR) Preparar relação para o DJe" name="(TR) Preparar relação para o DJe"/>
+        <transition to="(TR) Aguardando publicação no DJe" name="(TR) Aguardando publicação no DJe"/>
+    </task-node>
+    <end-state name="Término">
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:intimar_MP')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_precatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_rogatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:mandado')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:publicar_dje')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('tiposDisponiveisIds')}"/>
+        </event>
+    </end-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

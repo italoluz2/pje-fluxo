@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(VCiv) Controle do CEJUSC">
+    <description><![CDATA[Fluxo responsável pelo controle de processos enviados para conciliação no CEJUSC.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('-1:1338,1342:1469')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,5:5483,6:1469,6:5197')}"/>
+    </swimlane>
+    <swimlane name="CEJUSC">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:5886,5:1338,6:1469')}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial"/>
+        <transition to="(CEJUSC) Designar audiência" name="(CEJUSC) Designar audiência"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="(CEJUSC) Designar audiência">
+        <task name="(CEJUSC) Designar audiência" swimlane="CEJUSC">
+            <controller>
+                <variable name="Processo_Fluxo_abaDesignarAudiencia" mapped-name="frame:Processo_Fluxo_abaDesignarAudiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Elaborar Documentos/Expedientes ou devolver autos à secretaria"/>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Análise do CEJUSC">
+        <task name="(CEJUSC) Análise do CEJUSC" swimlane="CEJUSC">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Autos devolvidos pelo CEJUSC" name="Devolver autos à secretaria"/>
+        <transition to="(CEJUSC) Realizar audiência" name="Realizar audiência">
+            <condition expression="#{processoJudicialManager.getProximaAudienciaDesignada(tramitacaoProcessualService.recuperaProcesso()) != null}"/>
+        </transition>
+        <transition to="(CEJUSC) Designar audiência" name="Designar audiência">
+            <condition expression="#{processoJudicialManager.getProximaAudienciaDesignada(tramitacaoProcessualService.recuperaProcesso()) == null}"/>
+        </transition>
+        <transition to="(CEJUSC) Elaborar documento" name="Elaborar documento"/>
+        <transition to="(CEJUSC) Intimar da audiência" name="Intimar da audiência"/>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Autos devolvidos pelo CEJUSC">
+        <task name="(CEJUSC) Autos devolvidos pelo CEJUSC" swimlane="Secretaria"/>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Realizar audiência">
+        <task name="(CEJUSC) Realizar audiência" swimlane="CEJUSC">
+            <controller>
+                <variable name="Processo_Fluxo_abaDesignarAudiencia" mapped-name="frame:Processo_Fluxo_abaDesignarAudiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Finalizar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Intimar da audiência">
+        <task name="(CEJUSC) Intimar da audiência" swimlane="CEJUSC">
+            <controller>
+                <variable name="Processo_Fluxo_prepararExpediente" mapped-name="frame:Processo_Fluxo_prepararExpediente" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Processo com prazo em curso" name="Processos com prazo em curso">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Ignorar e sair da tarefa"/>
+        <event type="node-enter">
+            <action name="upd" expression="#{modeloDocumento.set('Processo_Fluxo_prepararExpediente',80)}"/>
+        </event>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setFrameDefaultTransition('Processos com prazo em curso')}"/>
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('tiposDisponiveisIds','60,69,65,71')}"/>
+            <action name="upd" expression="#{preparaAtoComunicacaoAction.setMeiosComunicacao('E,C,S,D,M,L,N,T')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Processo com prazo em curso">
+        <task name="(CEJUSC) Processo com prazo em curso" swimlane="CEJUSC"/>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Processo com prazo decorrido" name="Processo com prazo decorrido">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Ignorar e sair da tarefa"/>
+        <transition to="(CEJUSC) Prazos continuam abertos ?" name="Verificar se há prazo em aberto"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Processo com prazo decorrido')}"/>
+            <action expression="#{taskInstanceUtil.setVariable('pje:aguardaPeticao', 'true')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{taskInstanceUtil.deleteVariableLocally('pje:aguardaPeticao')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 ? 'Processo com prazo em curso' : 'Processo com prazo decorrido'}" name="(CEJUSC) Prazos continuam abertos ?">
+        <transition to="(CEJUSC) Processo com prazo em curso" name="Processo com prazo em curso"/>
+        <transition to="(CEJUSC) Processo com prazo decorrido" name="Processo com prazo decorrido"/>
+    </decision>
+    <task-node end-tasks="true" name="(CEJUSC) Processo com prazo decorrido">
+        <task name="(CEJUSC) Processo com prazo decorrido" swimlane="CEJUSC"/>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Elaborar documento">
+        <task name="(CEJUSC) Elaborar documento" swimlane="CEJUSC">
+            <controller>
+                <variable name="minutaEmElaboracao" mapped-name="textEditSignature:minutaEmElaboracao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Finalizar e sair da tarefa"/>
+        <transition to="(CEJUSC) É ofício ?" name="É ofício ?">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('É ofício ?')}"/>
+        </event>
+        <event type="task-start">
+            <action name="upd" expression="#{tramitacaoProcessualService.gravaVariavelTarefa('tiposDisponiveisIds','34,57')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{processoDocumentoManager.getProcessoDocumento(tramitacaoProcessualService.recuperaProcesso().getNumeroProcesso(),null, papelDAO.findByCodeName('admin'),null).get(0).getTipoProcessoDocumento().getIdTipoProcessoDocumento() == 34 ? '(CEJUSC) Lançar movimentação ofício' : '(CEJUSC) Lançar movimentação certidão'}" name="(CEJUSC) É ofício ?">
+        <transition to="(CEJUSC) Lançar movimentação ofício" name="(CEJUSC) Lançar movimentação ofício"/>
+        <transition to="(CEJUSC) Lançar movimentação certidão" name="(CEJUSC) Lançar movimentação certidão"/>
+    </decision>
+    <node name="(CEJUSC) Lançar movimentação certidão">
+        <transition to="(CEJUSC) Imprimir Documento" name="(CEJUSC) Imprimir Documento"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(60).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(107).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="(CEJUSC) Lançar movimentação ofício">
+        <transition to="(CEJUSC) Imprimir Documento" name="(CEJUSC) Imprimir Documento"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(60).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(79).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(CEJUSC) Assinar documento">
+        <task name="(CEJUSC) Assinar documento" swimlane="CEJUSC">
+            <controller>
+                <variable name="Processo_Fluxo_revisarMinuta" mapped-name="frame:Processo_Fluxo_revisarMinuta" access="read,write"/>
+                <variable name="AssinaturaEmLote" mapped-name="assinarLote:AssinaturaEmLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Finalizar e sair">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(CEJUSC) Imprimir Documento" name="Imprimir Documento">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Imprimir Documento')}"/>
+        </event>
+        <event type="task-start">
+            <action expression="#{tipoDocumento.set('Processo_Fluxo_revisarMinuta',34,57)}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(CEJUSC) Imprimir Documento">
+        <task name="(CEJUSC) Imprimir Documento" swimlane="CEJUSC">
+            <controller>
+                <variable name="Processo_ConsultaProcesso_Detalhe_detalheProcessoVisualizacao" mapped-name="page:Processo_ConsultaProcesso_Detalhe_detalheProcessoVisualizacao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="Finalizar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle do CEJUSC" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - (VCiv) Controle do CEJUSC">
+        <task name="Nó de Desvio - (VCiv) Controle do CEJUSC" swimlane="Nó de Desvio - (VCiv) Controle do CEJUSC"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(CEJUSC) Designar audiência" name="(CEJUSC) Designar audiência"/>
+        <transition to="(CEJUSC) Análise do CEJUSC" name="(CEJUSC) Análise do CEJUSC"/>
+        <transition to="(CEJUSC) Intimar da audiência" name="(CEJUSC) Intimar da audiência"/>
+        <transition to="(CEJUSC) Elaborar documento" name="(CEJUSC) Elaborar documento"/>
+        <transition to="(CEJUSC) Processo com prazo em curso" name="(CEJUSC) Processo com prazo em curso"/>
+        <transition to="(CEJUSC) Processo com prazo decorrido" name="(CEJUSC) Processo com prazo decorrido"/>
+        <transition to="(CEJUSC) Realizar audiência" name="(CEJUSC) Realizar audiência"/>
+        <transition to="(CEJUSC) Autos devolvidos pelo CEJUSC" name="(CEJUSC) Autos devolvidos pelo CEJUSC"/>
+        <transition to="(CEJUSC) Assinar documento" name="(CEJUSC) Assinar documento"/>
+        <transition to="(CEJUSC) Imprimir Documento" name="(CEJUSC) Imprimir Documento"/>
+    </task-node>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

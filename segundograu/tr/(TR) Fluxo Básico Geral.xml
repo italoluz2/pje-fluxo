@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Fluxo Básico Geral">
+    <description><![CDATA[Fluxo básico geral de entrada dos processos das Câmaras Cíveis e Pleno Cível...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Fluxo Básico Geral"/>
+    <swimlane name="Secretaria Segundo Grau">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria Segundo Grau"/>
+        <transition to="(TR) Tem pedido de urgência?" name="(TR) Tem pedido de urgência?"/>
+    </start-state>  
+    <!-- NODES -->
+    <decision expression="#{tramitacaoProcessualService.temUrgencia() ? '(TR) Conclusão para decisão de urgência inicial' : '(TR) Conclusão para despacho inicial'}" name="(TR) Tem pedido de urgência?">
+        <transition to="(TR) Conclusão para decisão de urgência inicial" name="(TR) Conclusão para decisão de urgência inicial"/>
+        <transition to="(TR) Conclusão para despacho inicial" name="(TR) Conclusão para despacho inicial"/>
+    </decision>
+    <process-state name="(TR) Conclusão para decisão de urgência inicial">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Despachados urgentes" name="(TR) Despachados urgentes"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_urgencia_inicial','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_urgencia_inicial')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para despacho inicial">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Despachados" name="(TR) Despachados"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:despacho','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:despacho_inicial','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:despacho')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:despacho_inicial')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="(TR) Despachados urgentes">
+        <task name="(TR) Despachados urgentes" swimlane="Secretaria Segundo Grau">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+                <variable name="MovimentarEmLote" mapped-name="movimentarLote:MovimentarEmLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Fluxo Básico Geral" name="Nó de Desvio - (TR) Fluxo Básico Geral">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Análise da Secretaria" name="Cumprir decisão"/>
+        <transition to="(TR) Preparar comunicação da decisão inicial" name="Preparar comunicação da decisão inicial"/>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Despachados">
+        <task name="(TR) Despachados" swimlane="Secretaria Segundo Grau">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+                <variable name="MovimentarEmLote" mapped-name="movimentarLote:MovimentarEmLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Fluxo Básico Geral" name="Nó de Desvio - (TR) Fluxo Básico Geral">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Análise da Secretaria" name="Cumprir despacho"/>
+        <transition to="(TR) Preparar comunicação da decisão inicial" name="Preparar comunicação do despacho inicial"/>
+    </task-node>
+    <process-state name="(TR) Preparar comunicação da decisão inicial">
+        <sub-process name="(TR) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:pac:citar_intimar','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="(TR) Análise da Secretaria">
+        <task name="(TR) Análise da Secretaria" swimlane="Secretaria Segundo Grau">
+            <controller>
+                <variable name="tr_fbg_apesar_desapensar" mapped-name="sim_nao:tr_fbg_apesar_desapensar" access="read,write"/>
+                <variable name="tr_fbg_certificar_decurso" mapped-name="sim_nao:tr_fbg_certificar_decurso" access="read,write"/>
+                <variable name="tr_fbg_certificar_transito" mapped-name="sim_nao:tr_fbg_certificar_transito" access="read,write"/>
+                <variable name="tr_fbg_citar_intimar" mapped-name="sim_nao:tr_fbg_citar_intimar" access="read,write"/>
+                <variable name="tr_fbg_controlar_retorno_expediente" mapped-name="sim_nao:tr_fbg_controlar_retorno_expediente" access="read,write"/>
+                <variable name="tr_fbg_expedir_carta" mapped-name="sim_nao:tr_fbg_expedir_carta" access="read,write"/>
+                <variable name="tr_fbg_expedir_mandado" mapped-name="sim_nao:tr_fbg_expedir_mandado" access="read,write"/>
+                <variable name="tr_fbg_expedir_oficio" mapped-name="sim_nao:tr_fbg_expedir_oficio" access="read,write"/>
+                <variable name="tr_fbg_intimar_MP" mapped-name="sim_nao:tr_fbg_intimar_MP" access="read,write"/>
+                <variable name="tr_fbg_suspender" mapped-name="sim_nao:tr_fbg_suspender" access="read,write"/>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Fluxo Básico Geral" name="Nó de Desvio - (TR) Fluxo Básico Geral">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Dar cumprimento a ato judicial" name="01 - Prosseguir na(s) tarefa(s) selecionada(s)"/>
+        <transition to="(TR) Redistribuição de processo" name="02 - Redistribuir processo"/>
+        <transition to="(TR) Arquivamento de processo" name="03 - Arquivar processo"/>
+        <transition to="(TR) Cancelamento de distribuição de processo" name="04 - Cancelar distribuição"/>
+        <transition to="(TR) Encaminhamento para instância superior" name="05 - Encaminhar para instância superior"/>
+        <transition to="(TR) Encaminhamento para o primeiro grau" name="06 - Encaminhar para o primeiro grau"/>
+        <transition to="(TR) Preparação de relatório, voto e ementa" name="07 - Enviar para elaboração de relatório, voto e ementa"/>
+        <transition to="(TR) Conclusão para decisão de urgência" name="08 - Enviar concluso para decisão de urgência"/>
+        <transition to="(TR) Conclusão para decisão" name="09 - Enviar concluso para decisão"/>
+        <transition to="(TR) Conclusão para decisão de Embargos de Declaração" name="10 - Enviar concluso para decisão de Embargos de Declaração"/>
+        <transition to="(TR) Conclusão para decisão de Agravo Regimental" name="11 - Enviar concluso para decisão de Agravo Regimental"/>
+        <transition to="(TR) Conclusão para decisão de Agravo Interno" name="12 - Enviar concluso para decisão de Agravo Interno"/>
+        <transition to="(TR) Conclusão para decisão de extinção" name="13 - Enviar concluso para decisão de extinção"/>
+        <transition to="(TR) Conclusão para despacho" name="14 - Enviar concluso para despacho"/>
+        <transition to="Término" name="Término">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:apesar_desapensar', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_apesar_desapensar'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:certificar_decurso', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_certificar_decurso'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:certificar_transito', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_certificar_transito'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:citar_intimar', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_citar_intimar'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:controlar_retorno_expediente', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_controlar_retorno_expediente'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:expedir_carta', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_expedir_carta'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:expedir_mandado', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_expedir_mandado'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:expedir_oficio', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_expedir_oficio'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:intimar_MP', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_intimar_MP'))}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cumpridec:suspender', tramitacaoProcessualService.recuperaVariavelTarefa('sim_nao:tr_fbg_suspender'))}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_apesar_desapensar')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_certificar_decurso')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_certificar_transito')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_citar_intimar')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_controlar_retorno_expediente')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_expedir_carta')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_expedir_mandado')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_expedir_oficio')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_intimar_MP')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavelTarefa('sim_nao:tr_fbg_suspender')}"/>
+        </event>
+        <event type="task-start">
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:apesar_desapensar')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:certificar_decurso')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:certificar_transito')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:citar_intimar')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:controlar_retorno_expediente')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:expedir_carta')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:expedir_mandado')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:expedir_oficio')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:intimar_MP')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:suspender')}"/>
+        </event>
+    </task-node>
+    <process-state name="(TR) Dar cumprimento a ato judicial">
+        <sub-process name="(TR) Cumprimento de decisão" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+    </process-state>
+    <process-state name="(TR) Redistribuição de processo">
+        <sub-process name="(TR) Redistribuição" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+    </process-state>
+    <process-state name="(TR) Arquivamento de processo">
+        <sub-process name="(TR) Arquivamento" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+    </process-state>
+    <process-state name="(TR) Cancelamento de distribuição de processo">
+        <sub-process name="(TR) Cancelamento de distribuição" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+    </process-state>
+    <process-state name="(TR) Encaminhamento para instância superior">
+        <sub-process name="(TR) Remessa para outra instância" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:reminst:instancia_superior','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:reminst:instancia_superior')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Encaminhamento para o primeiro grau">
+        <sub-process name="(TR) Remessa para outra instância" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:reminst:primeiro_grau','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:reminst:primeiro_grau')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Preparação de relatório, voto e ementa">
+        <sub-process name="(TR) Preparar Sessão de Julgamento" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+    </process-state>
+    <process-state name="(TR) Conclusão para decisão de urgência">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_urgencia','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_urgencia')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para decisão">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_generica','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_generica')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para decisão de Embargos de Declaração">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_embargos_declaracao','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_embargos_declaracao')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para decisão de Agravo Regimental">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_agravo_regimental','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_agravo_regimental')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para decisão de Agravo Interno">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_agravo_interno','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_agravo_interno')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para decisão de extinção">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_extincao','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_extincao')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Conclusão para despacho">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:despacho','true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:despacho_generico','true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:despacho')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:despacho_generico')}"/>
+        </event>
+    </process-state>
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Fluxo Básico Geral">
+        <task name="Nó de Desvio - (TR) Fluxo Básico Geral" swimlane="Nó de Desvio - (TR) Fluxo Básico Geral"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Despachados urgentes" name="(TR) Despachados urgentes"/>
+        <transition to="(TR) Despachados" name="(TR) Despachados"/>
+        <transition to="(TR) Análise da Secretaria" name="(TR) Análise da Secretaria"/>
+    </task-node>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

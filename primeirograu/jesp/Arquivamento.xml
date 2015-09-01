@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="Arquivamento">
+    <description><![CDATA[Fluxo de arquivamento.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('6:1469,5:1338,8:5852,8:5853')}" actor-id="#{actor.id}"/>
+    </swimlane>
+    <swimlane name="Nó de Desvio - Arquivamento">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469')}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="Arquivar processo" name="Arquivar processo"/>
+        <transition to="Nó de Desvio - Arquivamento" name="Nó de Desvio - Arquivamento"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="Arquivar processo">
+        <task name="Arquivar processo" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Arquivamento" name="Nó de Desvio - Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="ArqDef" name="Arquivo definitivo"/>
+        <transition to="ArqProv" name="Arquivo provisório"/>
+    </task-node>
+    <node name="ArqDef">
+        <transition to="Arquivo definitivo" name="Arquivo definitivo"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(246).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="ArqProv">
+        <transition to="Arquivo provisorio" name="Arquivo provisorio"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(245).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="Arquivo definitivo">
+        <task name="Arquivo definitivo" swimlane="Secretaria">
+            <controller>
+                <variable name="arquivamento_aviso" mapped-name="textAlert:arquivamento_aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Arquivamento" name="Nó de Desvio - Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Término">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Julgar sobre reativação" name="Julgar sobre reativação"/>
+    </task-node>
+    <task-node end-tasks="true" name="Arquivo provisorio">
+        <task name="Arquivo provisorio" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Arquivamento" name="Nó de Desvio - Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Desarq" name="Desarq"/>
+    </task-node>
+    <node name="Desarq">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(893).lancarMovimento()}"/>
+        </event>
+    </node>
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - Arquivamento">
+        <task name="Nó de Desvio - Arquivamento" swimlane="Nó de Desvio - Arquivamento"/>
+        <transition to="Término" name="Término"/>
+        <transition to="Arquivar processo" name="Arquivar processo"/>
+        <transition to="Arquivo provisorio" name="Arquivo provisorio"/>
+        <transition to="Arquivo definitivo" name="Arquivo definitivo"/>
+        <transition to="Despachados sobre reativação" name="Despachados sobre reativação"/>
+    </task-node>
+    <process-state name="Julgar sobre reativação">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Despachados sobre reativação" name="Despachados sobre reativação"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_reativacao', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_reativacao')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="Despachados sobre reativação">
+        <task name="Despachados sobre reativação" swimlane="Secretaria"/>
+        <transition to="Arquivo definitivo" name="Arquivo definitivo"/>
+        <transition to="Nó de Desvio - Arquivamento" name="Nó de Desvio - Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Lançar movimento de reativação" name="Lançar movimento de reativação"/>
+    </task-node>
+    <node name="Lançar movimento de reativação">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(849).lancarMovimento()}"/>
+        </event>
+    </node>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

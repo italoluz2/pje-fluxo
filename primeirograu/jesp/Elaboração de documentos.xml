@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="Elaboração de documentos">
+    <description><![CDATA[Fluxo destinado a elaboração de documentos diversos (ofício, alvará, carta precatória, etc).]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - Elaboração de documentos">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469')}"/>
+    </swimlane>
+    <swimlane name="Magistrado">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469,8:5852,8:5853')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469,8:5852,8:5853')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="Elaborar documento" name="Elaborar documento"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="Elaborar documento">
+        <task name="Elaborar documento" swimlane="Secretaria">
+            <controller>
+                <variable name="minutaEmElaboracao" mapped-name="textEditSecretariaJT:minutaEmElaboracao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Elaboração de documentos" name="Nó de Desvio - Elaboração de documentos">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Assinar documento" name="Encaminhar para assinatura"/>
+        <transition to="Término" name="Retornar para outras providências"/>
+        <event type="task-start">
+            <action expression="#{tipoDocumento.set('minutaEmElaboracao',34,91,94,67)}"/>
+            <action name="Condicao do lancamento temporario de movimentos" expression="#{lancadorMovimentosService.setCondicaoLancamentoMovimentosTemporarioNoFluxo('#{true}')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Assinar documento">
+        <task name="Assinar documento" swimlane="Magistrado">
+            <controller>
+                <variable name="Processo_Fluxo_revisarMinuta" mapped-name="frame:Processo_Fluxo_revisarMinuta" access="read,write"/>
+                <variable name="AssinarLote" mapped-name="assinarLote:AssinarLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Elaboração de documentos" name="Nó de Desvio - Elaboração de documentos">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Entregar documento" name="Entregar documento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Elaborar documento" name="Retornar para elaboração">
+            <condition expression="#{empty revisarMinutaAction.processoDocumento.processoDocumentoBin.signatarios and revisarMinutaAction.processoDocumento.ativo}"/>
+        </transition>
+        <transition to="Entregar documento" name="Documento já assinado! Encaminhar para secretaria">
+            <condition expression="#{not empty revisarMinutaAction.processoDocumento.processoDocumentoBin.signatarios and revisarMinutaAction.processoDocumento.ativo}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Entregar documento')}"/>
+        </event>
+        <event type="task-start">
+            <action expression="#{tipoDocumento.set('Processo_Fluxo_revisarMinuta',34,91,94,67)}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Entregar documento">
+        <task name="Entregar documento" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <description><![CDATA[]]></description>
+        <transition to="Término" name="Prosseguir no fluxo"/>
+        <transition to="Nó de Desvio - Elaboração de documentos" name="Nó de Desvio - Elaboração de documentos">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-start">
+            <action expression="#{lancadorMovimentosService.setCondicaoLancamentoMovimentosTemporarioNoFluxo('#{false}')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Nó de Desvio - Elaboração de documentos">
+        <task name="Nó de Desvio - Elaboração de documentos" swimlane="Nó de Desvio - Elaboração de documentos"/>
+        <transition to="Término" name="Término"/>
+        <transition to="Elaborar documento" name="Elaborar documento"/>
+        <transition to="Assinar documento" name="Assinar documento"/>
+        <transition to="Entregar documento" name="Entregar documento"/>
+    </task-node>
+    <end-state name="Término"/>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS -->
+    <action name="upd" expression="#{modeloDocumento.set('minutaEmElaboracao',102)}"/> 
+</process-definition>

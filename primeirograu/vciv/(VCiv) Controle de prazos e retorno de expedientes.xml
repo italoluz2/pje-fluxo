@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(VCiv) Controle de prazos e retorno de expedientes">
+    <description><![CDATA[Controla prazos e retorno de expedientes.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('-1:1338,1342:1469')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,8:5852,8:5853,6:1469')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(VCiv) É via ofício?" name="(VCiv) É via ofício?"/>
+    </start-state>  
+    <!-- NODES -->
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cpre:oficio') ? '(VCiv) Aguardando devolução de ofício' : '(VCiv) É via correios?'}" name="(VCiv) É via ofício?">
+        <transition to="(VCiv) É via correios?" name="(VCiv) É via correios?"/>
+        <transition to="(VCiv) Aguardando devolução de ofício" name="(VCiv) Aguardando devolução de ofício"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando devolução de ofício">
+        <task name="(VCiv) Aguardando devolução de ofício" swimlane="Secretaria"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Aguardando resposta de ofício" name="Encarminhar para aguardar resposta de ofício"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Aguardando resposta de ofício">
+        <task name="(VCiv) Aguardando resposta de ofício" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cpre:correios') ? '(VCiv) Aguardando devolução do AR' : '(VCiv) É via mandado?'}" name="(VCiv) É via correios?">
+        <transition to="(VCiv) Aguardando devolução do AR" name="(VCiv) Aguardando devolução do AR"/>
+        <transition to="(VCiv) É via mandado?" name="(VCiv) É via mandado?"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando devolução do AR">
+        <task name="(VCiv) Aguardando devolução do AR" swimlane="Secretaria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_exped_controleCorreios" mapped-name="frame:WEB-INF_xhtml_flx_exped_controleCorreios" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <transition to="(VCiv) Há expedientes em aberto?" name="Registrar devolução do AR"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:correios:registroCiencia', false)}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Registrar devolução do AR">
+        <task name="(VCiv) Registrar devolução do AR" swimlane="Secretaria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_exped_controleCorreios" mapped-name="frame:WEB-INF_xhtml_flx_exped_controleCorreios" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Aguardando devolução do AR" name="Retornar para aguardar devolução do AR"/>
+        <transition to="(VCiv) Há prazo em aberto?" name="Finalizar e sair da tarefa"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:correios:edicaoNumeroAR',false)}"/>
+        </event>
+    </task-node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cpre:mandado') ? '(VCiv) Aguardando devolução de mandado' : '(VCiv) É via carta precatória ou rogatória?'}" name="(VCiv) É via mandado?">
+        <transition to="(VCiv) Aguardando devolução de mandado" name="(VCiv) Aguardando devolução de mandado"/>
+        <transition to="(VCiv) É via carta precatória ou rogatória?" name="(VCiv) É via carta precatória ou rogatória?"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando devolução de mandado">
+        <task name="(VCiv) Aguardando devolução de mandado" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+    </task-node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cpre:carta') ? '(VCiv) Aguardando devolução de carta precatória ou rogatória' : '(VCiv) É via MP?'}" name="(VCiv) É via carta precatória ou rogatória?">
+        <transition to="(VCiv) É via MP?" name="(VCiv) É via MP?"/>
+        <transition to="(VCiv) Aguardando devolução de carta precatória ou rogatória" name="(VCiv) Aguardando devolução de carta precatória ou rogatória"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando carta precatória ou rogatória">
+        <task name="(VCiv) Aguardando carta precatória ou rogatória" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_expedientes_precatorias" mapped-name="frame:Processo_Fluxo_expedientes_precatorias" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Registrar devolução de carta precatória ou rogatória" name="Registrar devolução de carta precatória ou rogatória"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Aguardando devolução de carta precatória ou rogatória">
+        <task name="(VCiv) Aguardando devolução de carta precatória ou rogatória" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_expedientes_precatorias" mapped-name="frame:Processo_Fluxo_expedientes_precatorias" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Registrar devolução de carta precatória ou rogatória" name="Registrar devolução de carta precatória ou rogatória"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Registrar devolução de carta precatória ou rogatória">
+        <task name="(VCiv) Registrar devolução de carta precatória ou rogatória" swimlane="Secretaria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_exped_registroCiencia" mapped-name="frame:WEB-INF_xhtml_flx_exped_registroCiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Há prazo em aberto?" name="(VCiv) Há prazo em aberto?">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('pje:fluxo:registrociencia:meios','L')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cpre:MP') ? '(VCiv) Aguardando manifestação do MP' : '(VCiv) É via sistema?'}" name="(VCiv) É via MP?">
+        <transition to="(VCiv) É via sistema?" name="(VCiv) É via sistema?"/>
+        <transition to="(VCiv) Aguardando manifestação do MP" name="(VCiv) Aguardando manifestação do MP"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando manifestação do MP">
+        <task name="(VCiv) Aguardando manifestação do MP" swimlane="Secretaria"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Prazos continuam em aberto MP?" name="Verificar existência de prazo em aberto">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Verificar existência de prazo em aberto')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:aguardaPeticao', 'true')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:aguardaPeticao')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 ? '(VCiv) Aguardando manifestação do MP' : '(VCiv) Processos com prazo decorrido para manifestação do MP'}" name="(VCiv) Prazos continuam em aberto MP?">
+        <transition to="(VCiv) Aguardando manifestação do MP" name="(VCiv) Aguardando manifestação do MP"/>
+        <transition to="(VCiv) Processos com prazo decorrido para manifestação do MP" name="(VCiv) Processos com prazo decorrido para manifestação do MP"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Processos com prazo decorrido para manifestação do MP">
+        <task name="(VCiv) Processos com prazo decorrido para manifestação do MP" swimlane="Secretaria"/>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('vciv:cpre:sistema') ? '(VCiv) Há prazo em aberto?' : '(VCiv) Controlar retorno de expediente'}" name="(VCiv) É via sistema?">
+        <transition to="(VCiv) Há prazo em aberto?" name="(VCiv) Há prazo em aberto?"/>
+        <transition to="(VCiv) Controlar retorno de expediente" name="(VCiv) Controlar retorno de expediente"/>
+    </decision>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 ? '(VCiv) Processos com prazo em curso' : 'Término'}" name="(VCiv) Há prazo em aberto?">
+        <transition to="Término" name="Término"/>
+        <transition to="(VCiv) Processos com prazo em curso" name="(VCiv) Processos com prazo em curso"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Processos com prazo em curso">
+        <task name="(VCiv) Processos com prazo em curso" swimlane="Secretaria"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Prazos continuam em aberto?" name="Verificar existência de prazo em aberto">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Verificar existência de prazo em aberto')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:aguardaPeticao', 'true')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:aguardaPeticao')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 ? '(VCiv) Processos com prazo em curso' : '(VCiv) Processos com prazos decorridos'}" name="(VCiv) Prazos continuam em aberto?">
+        <transition to="(VCiv) Processos com prazo em curso" name="(VCiv) Processos com prazo em curso"/>
+        <transition to="(VCiv) Processos com prazos decorridos" name="(VCiv) Processos com prazos decorridos"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Processos com prazos decorridos">
+        <task name="(VCiv) Processos com prazos decorridos" swimlane="Secretaria">
+            <controller>
+                <variable name="MovimentarLote" mapped-name="movimentarLote:MovimentarLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Controlar retorno de expediente">
+        <task name="(VCiv) Controlar retorno de expediente" swimlane="Secretaria"/>
+        <transition to="(VCiv) Aguardando devolução de ofício" name="Aguardar devolução de ofício"/>
+        <transition to="(VCiv) Aguardando resposta de ofício" name="Aguardar resposta de ofício"/>
+        <transition to="(VCiv) Há expediente AR em aberto?" name="Aguardar devolução do AR"/>
+        <transition to="(VCiv) Há expediente em aberto?" name="Registrar devolução do AR"/>
+        <transition to="(VCiv) Há prazo em aberto?" name="Aguardar decurso de prazo"/>
+        <transition to="(VCiv) Aguardando devolução de mandado" name="Aguardar devolução de mandado"/>
+        <transition to="(VCiv) Aguardando devolução de carta precatória ou rogatória" name="Aguardar carta precatória ou rogatória"/>
+        <transition to="(VCiv) Aguardando manifestação do MP" name="Aguardando manifestação do MP"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes">
+        <task name="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes" swimlane="Nó de Desvio - (VCiv) Controle de prazos e retorno de expedientes"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(VCiv) Aguardando devolução de ofício" name="(VCiv) Aguardando devolução de ofício"/>
+        <transition to="(VCiv) Aguardando resposta de ofício" name="(VCiv) Aguardando resposta de ofício"/>
+        <transition to="(VCiv) Aguardando devolução do AR" name="(VCiv) Aguardando devolução do AR"/>
+        <transition to="(VCiv) Registrar devolução do AR" name="(VCiv) Registrar devolução do AR"/>
+        <transition to="(VCiv) Controlar retorno de expediente" name="(VCiv) Controlar retorno de expediente"/>
+        <transition to="(VCiv) Aguardando devolução de mandado" name="(VCiv) Aguardando devolução de mandado"/>
+        <transition to="(VCiv) Registrar devolução de carta precatória ou rogatória" name="(VCiv) Registrar devolução de carta precatória ou rogatória"/>
+        <transition to="(VCiv) Aguardando manifestação do MP" name="(VCiv) Aguardando manifestação do MP"/>
+        <transition to="(VCiv) Processos com prazo decorrido para manifestação do MP" name="(VCiv) Processos com prazo decorrido para manifestação do MP"/>
+        <transition to="(VCiv) Processos com prazo em curso" name="(VCiv) Processos com prazo em curso"/>
+        <transition to="(VCiv) Processos com prazos decorridos" name="(VCiv) Processos com prazos decorridos"/>
+        <transition to="(VCiv) Aguardando devolução de carta precatória ou rogatória" name="(VCiv) Aguardando devolução de carta precatória ou rogatória"/>
+        <transition to="(VCiv) Aguardando carta precatória ou rogatória" name="(VCiv) Aguardando carta precatória ou rogatória"/>
+    </task-node>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 || processoParteExpedienteManager.getAtosComunicacaoSemPrazo(0, processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))).size() &gt; 0 ? '(VCiv) Registrar devolução do AR' : '(VCiv) Controlar retorno de expediente'}" name="(VCiv) Há expediente em aberto?">
+        <transition to="(VCiv) Registrar devolução do AR" name="(VCiv) Registrar devolução do AR"/>
+        <transition to="(VCiv) Controlar retorno de expediente" name="(VCiv) Controlar retorno de expediente"/>
+    </decision>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 || processoParteExpedienteManager.getAtosComunicacaoSemPrazo(0, processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))).size() &gt; 0 ? '(VCiv) Registrar devolução do AR' : '(VCiv) Aguardando devolução do AR'}" name="(VCiv) Há expedientes em aberto?">
+        <transition to="(VCiv) Aguardando devolução do AR" name="(VCiv) Aguardando devolução do AR"/>
+        <transition to="(VCiv) Registrar devolução do AR" name="(VCiv) Registrar devolução do AR"/>
+    </decision>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 || processoParteExpedienteManager.getAtosComunicacaoSemPrazo(0, processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))).size() &gt; 0 ? '(VCiv) Aguardando devolução do AR' : '(VCiv) Controlar retorno de expediente'}" name="(VCiv) Há expediente AR em aberto?">
+        <transition to="(VCiv) Aguardando devolução do AR" name="(VCiv) Aguardando devolução do AR"/>
+        <transition to="(VCiv) Controlar retorno de expediente" name="(VCiv) Controlar retorno de expediente"/>
+    </decision>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

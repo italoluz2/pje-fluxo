@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(VCiv) Arquivamento">
+    <description><![CDATA[Fluxo que controla o arquivamento.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (VCiv) Arquivamento">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('-1:1338,1342:1469')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469,8:5852,8:5853')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(VCiv) Arquivar" name="(VCiv) Arquivar"/>
+    </start-state>  
+    <!-- NODES -->
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - (VCiv) Arquivamento">
+        <task name="Nó de Desvio - (VCiv) Arquivamento" swimlane="Nó de Desvio - (VCiv) Arquivamento"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(VCiv) Arquivar" name="(VCiv) Arquivar"/>
+        <transition to="(VCiv) Arquivo definitivo" name="(VCiv) Arquivo definitivo"/>
+        <transition to="(VCiv) Arquivo provisório" name="(VCiv) Arquivo provisório"/>
+        <transition to="(VCiv) Despachados sobre reativação" name="(VCiv) Despachados sobre reativação"/>
+        <transition to="(VCiv) Definir data de Arquivo provisório" name="(VCiv) Definir data de Arquivo provisório">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Arquivo provisório - art. 40" name="(VCiv) Arquivo provisório - art. 40"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Arquivar">
+        <task name="(VCiv) Arquivar" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Arquivamento" name="Nó de Desvio - (VCiv) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Lançar movimento de Arquivo Definitivo" name="Arquivar definitivamente"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <transition to="(VCiv) Definir data de Arquivo provisório" name="Arquivar provisoriamente"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Definir data de Arquivo provisório">
+        <task name="(VCiv) Definir data de Arquivo provisório" swimlane="Secretaria">
+            <controller>
+                <variable name="vciv_cs_data_limite_arquivamento" mapped-name="date:vciv_cs_data_limite_arquivamento" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Arquivamento" name="Nó de Desvio - (VCiv) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Lançar movimento de Arquivo provisório" name="Arquivar provisoriamente"/>
+        <transition to="(VCiv) Lançar movimento de Arquivo provisório - art. 40" name="Arquivar provisoriamente - art. 40"/>
+        <transition to="(VCiv) Arquivar" name="Retornar para opções de arquivamento"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('date:vciv_cs_data_limite_arquivamento')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('dla', tramitacaoProcessualService.recuperaVariavelTarefa('date:vciv_cs_data_limite_arquivamento'))}"/>
+        </event>
+    </task-node>
+    <node name="(VCiv) Lançar movimento de Arquivo Definitivo">
+        <transition to="(VCiv) Arquivo definitivo" name="(VCiv) Arquivo definitivo"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(246).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(VCiv) Arquivo definitivo">
+        <task name="(VCiv) Arquivo definitivo" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Arquivamento" name="Nó de Desvio - (VCiv) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Conclusão para decisão de reativação" name="Enviar concluso para decisão de reativação"/>
+    </task-node>
+    <node name="(VCiv) Lançar movimento de Reativação">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(849).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="(VCiv) Lançar movimento de Arquivo provisório">
+        <transition to="(VCiv) Arquivo provisório" name="(VCiv) Arquivo provisório"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(245).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="(VCiv) Lançar movimento de Arquivo provisório - art. 40">
+        <transition to="(VCiv) Arquivo provisório - art. 40" name="(VCiv) Arquivo provisório - art. 40"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(245).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(VCiv) Arquivo provisório">
+        <task name="(VCiv) Arquivo provisório" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso_arquivamento1" mapped-name="textAlert:aviso_arquivamento1" access="read,write"/>
+                <variable name="aviso_arquivamento2" mapped-name="textAlert:aviso_arquivamento2" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Arquivamento" name="Nó de Desvio - (VCiv) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Lançar movimento de Desarquivamento" name="Desarquivar o processo"/>
+    </task-node>
+    <task-node end-tasks="true" name="(VCiv) Arquivo provisório - art. 40">
+        <task name="(VCiv) Arquivo provisório - art. 40" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso_arquivamento3" mapped-name="textAlert:aviso_arquivamento3" access="read,write"/>
+                <variable name="aviso_arquivamento4" mapped-name="textAlert:aviso_arquivamento4" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (VCiv) Arquivamento" name="Nó de Desvio - (VCiv) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Lançar movimento de Desarquivamento" name="Desarquivar o processo"/>
+    </task-node>
+    <node name="(VCiv) Lançar movimento de Desarquivamento">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(893).lancarMovimento()}"/>
+        </event>
+    </node>
+    <process-state name="(VCiv) Conclusão para decisão de reativação">
+        <sub-process name="(VCiv) Preparar Ato Judicial" binding="late"/>
+        <transition to="(VCiv) Despachados sobre reativação" name="(VCiv) Despachados sobre reativação"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_reativacao', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_reativacao')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="(VCiv) Despachados sobre reativação">
+        <task name="(VCiv) Despachados sobre reativação" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(VCiv) Arquivo definitivo" name="Manter arquivado"/>
+        <transition to="(VCiv) Lançar movimento de Reativação" name="Reativar o processo"/>
+        <transition to="Nó de Desvio - (VCiv) Arquivamento" name="Nó de Desvio - (VCiv) Arquivamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Citar e(ou) intimar sobre reativação" name="Intimar da decisão"/>
+    </task-node>
+    <process-state name="(VCiv) Citar e(ou) intimar sobre reativação">
+        <sub-process name="(VCiv) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(VCiv) Despachados sobre reativação" name="(VCiv) Despachados sobre reativação"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_reativacao', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:publicar_dje', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_precatoria', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:citar_intimar_audiencia', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:intimar_mp', false)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('vciv:cumpridec:expedir_carta_rogatoria', false)}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('vciv:cumpridec:citar_intimar_reativacao')}"/>
+        </event>
+    </process-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

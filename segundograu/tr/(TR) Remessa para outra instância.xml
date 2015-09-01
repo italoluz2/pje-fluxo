@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Remessa para outra instância">
+    <description><![CDATA[Remessa de processo para outra instância.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Remessa para outra instância"/>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) É encaminhar para instância superior?" name="(TR) É encaminhar para instância superior?"/>
+    </start-state>  
+    <!-- NODES -->
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:reminst:instancia_superior') ? '(TR) Encaminhar para instância superior' : '(TR) Encaminhar ao primeiro grau'}" name="(TR) É encaminhar para instância superior?">
+        <transition to="(TR) Encaminhar para instância superior" name="(TR) Encaminhar para instância superior"/>
+        <transition to="(TR) Encaminhar ao primeiro grau" name="(TR) Encaminhar ao primeiro grau"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Encaminhar para instância superior">
+        <task name="(TR) Encaminhar para instância superior" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Remessa para outra instância" name="Nó de Desvio - (TR) Remessa para outra instância">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de remessa para instância superior" name="Efetuar remessa para instância superior"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <node name="(TR) Lançar movimento de remessa para instância superior">
+        <transition to="(TR) Aguardando julgamento da instância superior" name="(TR) Aguardando julgamento da instância superior"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(123).comComplementoDeCodigo(7).doTipoLivre().preencherComTexto('instância superior').comComplementoDeCodigo(18).doTipoDominio().preencherComElementoDeCodigo(38).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Aguardando julgamento da instância superior">
+        <task name="(TR) Aguardando julgamento da instância superior" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Remessa para outra instância" name="Nó de Desvio - (TR) Remessa para outra instância">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Finalizar e sair da tarefa"/>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Encaminhar ao primeiro grau">
+        <task name="(TR) Encaminhar ao primeiro grau" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Remessa para outra instância" name="Nó de Desvio - (TR) Remessa para outra instância">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de remessa para primeiro grau" name="Efetuar remessa ao primeiro grau"/>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+    </task-node>
+    <node name="(TR) Lançar movimento de remessa para primeiro grau">
+        <transition to="(TR) Remetidos ao primeiro grau" name="(TR) Remetidos ao primeiro grau"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(123).comComplementoDeCodigo(7).doTipoLivre().preencherComTexto('ao primeiro grau').comComplementoDeCodigo(18).doTipoDominio().preencherComElementoDeCodigo(40).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Remetidos ao primeiro grau">
+        <task name="(TR) Remetidos ao primeiro grau" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Remessa para outra instância" name="Nó de Desvio - (TR) Remessa para outra instância">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Término"/>
+    </task-node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Remessa para outra instância">
+        <task name="Nó de Desvio - (TR) Remessa para outra instância" swimlane="Nó de Desvio - (TR) Remessa para outra instância"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Encaminhar para instância superior" name="(TR) Encaminhar para instância superior"/>
+        <transition to="(TR) Aguardando julgamento da instância superior" name="(TR) Aguardando julgamento da instância superior"/>
+        <transition to="(TR) Encaminhar ao primeiro grau" name="(TR) Encaminhar ao primeiro grau"/>
+        <transition to="(TR) Remetidos ao primeiro grau" name="(TR) Remetidos ao primeiro grau"/>
+    </task-node>
+    <end-state name="Término">
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:reminst:instancia_superior')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:reminst:primeiro_grau')}"/>
+        </event>
+    </end-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

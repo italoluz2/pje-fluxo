@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="Fluxo Básico de Conhecimento">
+    <description><![CDATA[Fluxo básico de conhecimento das Turmas Recursais...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - Fluxo Básico de Conhecimento">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('6:1469,8:1338')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('6:1469,8:1338')}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <description><![CDATA[]]></description>
+        <transition to="Triagem inicial" name="Triagem inicial"/>
+    </start-state>  
+    <!-- NODES -->
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+        <task name="Nó de Desvio - Fluxo Básico de Conhecimento" swimlane="Nó de Desvio - Fluxo Básico de Conhecimento"/>
+        <transition to="Término" name="Término"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+        <transition to="Verificar se houve trânsito em julgado" name="Verificar se houve trânsito em julgado"/>
+        <transition to="Avaliar resposta de admissibilidade" name="Avaliar resposta de admissibilidade"/>
+        <transition to="Certificar manifestações" name="Certificar manifestações"/>
+        <transition to="Encaminhar para instância superior" name="Encaminhar para instância superior"/>
+        <transition to="Aguardar julgamento de instância superior" name="Aguardar julgamento de instância superior"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Aguardar cumprimento de providências finais" name="Aguardar cumprimento de providências finais"/>
+        <transition to="Devolver para instância de origem" name="Devolver para instância de origem"/>
+        <transition to="Incluir em pauta" name="Incluir em pauta"/>
+        <transition to="Aguardar julgamento" name="Aguardar julgamento"/>
+        <transition to="Devolvidos ao 1º grau" name="Devolvidos ao 1º grau"/>
+        <transition to="Triagem inicial" name="Triagem inicial"/>
+    </task-node>
+    <process-state name="Proferir despacho inicial">
+        <sub-process name="Preparar Ato Judicial de Despacho Inicial" binding="late"/>
+        <transition to="Verificar providências após ato judicial" name="Verificar providências após ato judicial"/>
+    </process-state>
+    <process-state name="Verificar providências após ato judicial">
+        <sub-process name="Cumprimento de Decisão" binding="late"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+    </process-state>
+    <task-node end-tasks="true" name="Verificar providências a adotar">
+        <task name="Verificar providências a adotar" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Lançar movimento concluso para decisão" name="Fazer concluso para decisão"/>
+        <transition to="Lançar movimento concluso para despacho" name="Fazer concluso para despacho"/>
+        <transition to="Elaborar expedientes" name="Elaborar expedientes"/>
+        <transition to="Verificar se houve trânsito em julgado" name="Encaminhar para verificação de trânsito em julgado"/>
+        <transition to="Incluir em pauta" name="Incluir em pauta"/>
+        <transition to="Encaminhar da secretaria para concluso no novo fluxo" name="Encaminhar da secretaria para concluso no novo fluxo"/>
+    </task-node>
+    <node name="Lançar movimento concluso para decisão">
+        <transition to="Proferir decisão" name="Proferir decisão"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(6).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="Lançar movimento concluso para despacho (inicial)">
+        <transition to="Proferir despacho inicial" name="Proferir despacho inicial"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).associarAoProcesso(tramitacaoProcessualService.recuperaProcesso()).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(5).lancarMovimento()}"/>
+        </event>
+    </node>
+    <process-state name="Proferir decisão">
+        <sub-process name="Preparar Ato Judicial 2" binding="late"/>
+        <transition to="Verificar providências após ato judicial" name="Verificar providências após ato judicial"/>
+    </process-state>
+    <node name="Lançar movimento concluso para despacho">
+        <transition to="Proferir despacho" name="Proferir despacho"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).associarAoProcesso(tramitacaoProcessualService.recuperaProcesso()).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(5).lancarMovimento()}"/>
+        </event>
+    </node>
+    <process-state name="Proferir despacho">
+        <sub-process name="Preparar Ato Judicial de Despacho" binding="late"/>
+        <transition to="Verificar providências após ato judicial" name="Verificar providências após ato judicial"/>
+    </process-state>
+    <process-state name="Elaborar expedientes">
+        <sub-process name="Preparar Ato de Comunicação" binding="late"/>
+        <description><![CDATA[]]></description>
+        <transition to="Controlar prazos de expedientes" name="Controlar prazos de expedientes"/>
+    </process-state>
+    <process-state name="Controlar prazos de expedientes">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+    </process-state>
+    <task-node end-tasks="true" name="Verificar se houve trânsito em julgado">
+        <task name="Verificar se houve trânsito em julgado" swimlane="Secretaria">
+            <controller>
+                <variable name="pje_fbg_houverecurso" mapped-name="sim_nao:pje_fbg_houverecurso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Houve recurso?" name="Houve recurso?"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbg:houverecurso', tramitacaoProcessualService.recuperaVariavel('sim_nao:pje_fbg_houverecurso'))}"/>
+        </event>
+    </task-node>
+    <decision expression="#{(tramitacaoProcessualService.recuperaVariavel('pje:fbg:houverecurso')) ? 'Fazer concluso para decisão de admissibilidade recursal' : 'Certificar manifestações'}" name="Houve recurso?">
+        <transition to="Certificar manifestações" name="Certificar manifestações"/>
+        <transition to="Lançar movimento concluso para decisão (admissibilidade recursal)" name="Fazer concluso para decisão de admissibilidade recursal"/>
+    </decision>
+    <process-state name="Proferir decisão de admissibilidade recursal">
+        <sub-process name="Preparar ato judicial de decisão de admissibilidade recursal" binding="late"/>
+        <transition to="Intimar da decisão de admissibilidade" name="Intimar da decisão de admissibilidade"/>
+    </process-state>
+    <process-state name="Intimar da decisão de admissibilidade">
+        <sub-process name="Preparar ato judicial de decisão de admissibilidade recursal" binding="late"/>
+        <transition to="Controlar prazos da intimação de admissibilidade recursal" name="Controlar prazos da intimação de admissibilidade recursal"/>
+    </process-state>
+    <process-state name="Controlar prazos da intimação de admissibilidade recursal">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Avaliar resposta de admissibilidade" name="Avaliar resposta de admissibilidade"/>
+    </process-state>
+    <task-node end-tasks="true" name="Avaliar resposta de admissibilidade">
+        <task name="Avaliar resposta de admissibilidade" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Certificar manifestações" name="Certificar manifestações"/>
+    </task-node>
+    <task-node end-tasks="true" name="Certificar manifestações">
+        <task name="Certificar manifestações" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Encaminhar para instância superior" name="Encaminhar para instância superior"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+    </task-node>
+    <task-node end-tasks="true" name="Encaminhar para instância superior">
+        <task name="Encaminhar para instância superior" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Aguardar julgamento de instância superior" name="Aguardar julgamento de instância superior"/>
+    </task-node>
+    <task-node end-tasks="true" name="Aguardar julgamento de instância superior">
+        <task name="Aguardar julgamento de instância superior" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+    </task-node>
+    <task-node end-tasks="true" name="Avaliar forma de encerramento">
+        <task name="Avaliar forma de encerramento" swimlane="Secretaria"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Lançar movimento concluso para decisão (providências finais)" name="Lançar movimento concluso para decisão (providências finais)"/>
+        <transition to="Devolver para instância de origem" name="Devolver para instância de origem"/>
+    </task-node>
+    <node name="Lançar movimento concluso para decisão (providências finais)">
+        <transition to="Proferir decisão de providências finais" name="Proferir decisão de providências finais"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(6).lancarMovimento()}"/>
+        </event>
+    </node>
+    <process-state name="Proferir decisão de providências finais">
+        <sub-process name="Preparar ato judicial de decisão de providências finais" binding="late"/>
+        <transition to="Intimar da decisão de providências finais" name="Intimar da decisão de providências finais"/>
+    </process-state>
+    <process-state name="Intimar da decisão de providências finais">
+        <sub-process name="Preparar Ato de Comunicação" binding="late"/>
+        <transition to="Controlar prazos da intimação providências finais" name="Controlar prazos da intimação providências finais"/>
+    </process-state>
+    <process-state name="Controlar prazos da intimação providências finais">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Aguardar cumprimento de providências finais" name="Aguardar cumprimento de providências finais"/>
+    </process-state>
+    <task-node end-tasks="true" name="Aguardar cumprimento de providências finais">
+        <task name="Aguardar cumprimento de providências finais" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Arquivar" name="Arquivar"/>
+    </task-node>
+    <process-state name="Arquivar">
+        <sub-process name="Arquivamento" binding="late"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+    </process-state>
+    <task-node end-tasks="true" name="Devolver para instância de origem">
+        <task name="Devolver para instância de origem" swimlane="Secretaria">
+            <controller>
+                <variable name="Intercomunicacao_retornoProcesso" mapped-name="frame:Intercomunicacao_retornoProcesso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Término" name="Término">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Devolvidos ao 1º grau" name="Devolvidos ao 1º grau">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Devolvidos ao 1º grau')}"/>
+        </event>
+        <event type="task-start">
+            <action expression="#{taskInstanceUtil.setVariable('comboMotivoRemessa','18;37,38,39,40,90')}"/>
+        </event>
+    </task-node>
+    <node name="Lançar movimento concluso para decisão (admissibilidade recursal)">
+        <transition to="Proferir decisão de admissibilidade recursal" name="Proferir decisão de admissibilidade recursal"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(6).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="Incluir em pauta">
+        <task name="Incluir em pauta" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Aguardar julgamento" name="Aguardar julgamento"/>
+    </task-node>
+    <task-node end-tasks="true" name="Aguardar julgamento">
+        <task name="Aguardar julgamento" swimlane="Secretaria"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="Devolvidos ao 1º grau">
+        <task name="Devolvidos ao 1º grau" swimlane="Secretaria"/>
+        <transition to="Verificar providências a adotar" name="Retornar para outras providências"/>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <task-node end-tasks="true" name="Triagem inicial">
+        <task name="Triagem inicial" swimlane="Secretaria">
+            <controller>
+                <variable name="MovimentarLote" mapped-name="movimentarLote:MovimentarLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Lançar movimento concluso para despacho (inicial)" name="Enviar concluso para despacho inicial">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Nó de Desvio - Fluxo Básico de Conhecimento" name="Nó de Desvio - Fluxo Básico de Conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Encaminhar da secretaria para concluso no novo fluxo" name="Encaminhar da secretaria para concluso no novo fluxo"/>
+    </task-node>
+    <process-state name="Encaminhar da secretaria para concluso no novo fluxo">
+        <sub-process name="(TR) Fluxo Básico Geral" binding="late"/>
+        <transition to="Verificar providências a adotar" name="Verificar providências a adotar"/>
+    </process-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

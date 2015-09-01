@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Controle de suspensão">
+    <description><![CDATA[Controle de suspensão processual...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Controle de suspensão"/>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) Suspender processo" name="(TR) Suspender processo"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="(TR) Suspender processo">
+        <task name="(TR) Suspender processo" swimlane="Secretaria">
+            <controller>
+                <variable name="tr_cs_data_limite_suspensao" mapped-name="date:tr_cs_data_limite_suspensao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Controle de suspensão" name="Nó de Desvio - (TR) Controle de suspensão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar e sair da tarefa"/>
+        <transition to="(TR) Confirmar suspensão do processo" name="Confirmar suspensão do processo"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('date:tr_cs_data_limite_suspensao')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('dls', tramitacaoProcessualService.recuperaVariavelTarefa('date:tr_cs_data_limite_suspensao'))}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Confirmar suspensão do processo">
+        <task name="(TR) Confirmar suspensão do processo" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso_conf_suspensao" mapped-name="textAlert:aviso_conf_suspensao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(TR) Suspender processo" name="Retificar data de suspensão do processo"/>
+        <transition to="Nó de Desvio - (TR) Controle de suspensão" name="Nó de Desvio - (TR) Controle de suspensão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Houve data limite de suspensão?" name="Suspender o processo"/>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaVariavel('dls') != null  ? '(TR) Processos suspensos - com prazo' : '(TR) Processos suspensos - sem prazo'}" name="(TR) Houve data limite de suspensão?">
+        <transition to="(TR) Processos suspensos - sem prazo" name="(TR) Processos suspensos - sem prazo"/>
+        <transition to="(TR) Processos suspensos - com prazo" name="(TR) Processos suspensos - com prazo"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Processos suspensos - com prazo">
+        <task name="(VCiv) Processos suspensos - com prazo" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso_susp_com_prazo" mapped-name="textAlert:aviso_susp_com_prazo" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(TR) Conclusão sobre encerramento de suspensão" name="Enviar concluso para decisão sobre encerramento da suspensão"/>
+        <transition to="(TR) Lançar movimento de encerramento de suspensão" name="Encerrar suspensão do processo"/>
+        <transition to="Nó de Desvio - (TR) Controle de suspensão" name="Nó de Desvio - (TR) Controle de suspensão">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-start">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cs:suspensao_com_prazo', 'true')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Processos suspensos - sem prazo">
+        <task name="(TR) Processos suspensos - sem prazo" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso_susp_sem_prazo" mapped-name="textAlert:aviso_susp_sem_prazo" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="(TR) Conclusão sobre encerramento de suspensão" name="Enviar concluso para decisão sobre encerramento da suspensão"/>
+        <transition to="(TR) Lançar movimento de encerramento de suspensão" name="Encerrar suspensão do processo"/>
+        <transition to="Nó de Desvio - (TR) Controle de suspensão" name="Nó de Desvio - (TR) Controle de suspensão">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-start">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:cs:suspensao_sem_prazo', 'true')}"/>
+        </event>
+    </task-node>
+    <process-state name="(TR) Conclusão sobre encerramento de suspensão">
+        <sub-process name="(TR) Preparar Ato Judicial" binding="late"/>
+        <transition to="(TR) Despachados sobre encerramento de suspensão" name="(TR) Despachados sobre encerramento de suspensão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:paj:decisao_generica', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:paj:decisao_generica')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="(TR) Despachados sobre encerramento de suspensão">
+        <task name="(TR) Despachados sobre encerramento de suspensão" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Controle de suspensão" name="Nó de Desvio - (TR) Controle de suspensão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimento de encerramento de suspensão" name="Encerrar suspensão"/>
+        <transition to="(TR) Houve data limite de suspensão?" name="Manter processo suspenso por outro motivo"/>
+    </task-node>
+    <node name="(TR) Lançar movimento de encerramento de suspensão">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(9001).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Controle de suspensão">
+        <task name="Nó de Desvio - (TR) Controle de suspensão" swimlane="Nó de Desvio - (TR) Controle de suspensão"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Suspender processo" name="(TR) Suspender processo"/>
+        <transition to="(TR) Despachados sobre encerramento de suspensão" name="(TR) Despachados sobre encerramento de suspensão"/>
+        <transition to="(TR) Confirmar suspensão do processo" name="(TR) Confirmar suspensão do processo"/>
+        <transition to="(TR) Processos suspensos - com prazo" name="(VCiv) Processos suspensos - com prazo"/>
+        <transition to="(TR) Processos suspensos - sem prazo" name="(TR) Processos suspensos - sem prazo"/>
+    </task-node>
+    <end-state name="Término">
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr_cs_data_limite_suspensao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('dls')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('aviso_conf_suspensao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('aviso_susp_com_prazo')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('aviso_susp_sem_prazo')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cs:suspensao_com_prazo')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:cs:suspensao_sem_prazo')}"/>
+        </event>
+    </end-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

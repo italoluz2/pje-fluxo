@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(VCiv) Controle de Prazos">
+    <description><![CDATA[Fluxo destinado ao controle de prazos.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (VCiv) Controle de Prazos">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('-1:1338,1342:1469')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,8:5852,8:5853,6:1469')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(VCiv) Há prazo em aberto?" name="(VCiv) Há prazo de citação e(ou) intimação em aberto?"/>
+    </start-state>  
+    <!-- NODES -->
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - (VCiv) Controle de Prazos">
+        <task name="Nó de Desvio - (VCiv) Controle de Prazos" swimlane="Nó de Desvio - (VCiv) Controle de Prazos"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(VCiv) Aguardando decurso de prazo" name="(VCiv) Aguardando decurso de prazo"/>
+        <transition to="(VCiv) Processo com prazo decorrido" name="(VCiv) Processos com prazos vencidos"/>
+    </task-node>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 ? '(VCiv) Aguardando decurso de prazo' : 'Término'}" name="(VCiv) Há prazo em aberto?">
+        <transition to="(VCiv) Aguardando decurso de prazo" name="(VCiv) Aguardando decurso de prazo"/>
+        <transition to="Término" name="Término"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Aguardando decurso de prazo">
+        <task name="(VCiv) Aguardando decurso de prazo" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de Prazos" name="Nó de Desvio - (VCiv) Controle de Prazos">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(VCiv) Prazos continuam abertos?" name="Verificar se há prazo em aberto">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Ignorar verificação de decurso de prazo"/>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Verificar se há prazo em aberto')}"/>
+            <action expression="#{taskInstanceUtil.setVariable('pje:aguardaPeticao', 'true')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{taskInstanceUtil.deleteVariableLocally('pje:aguardaPeticao')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{atoComunicacaoService.getAtosComunicacaoAbertos(processoJudicialService.findById(org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processo'))) &gt; 0 ? '(VCiv) Aguardando decurso de prazo' : '(VCiv) Processos com prazos vencidos'}" name="(VCiv) Prazos continuam abertos?">
+        <transition to="(VCiv) Aguardando decurso de prazo" name="(VCiv) Aguardando decurso de prazo"/>
+        <transition to="(VCiv) Processo com prazo decorrido" name="(VCiv) Processos com prazos vencidos"/>
+    </decision>
+    <task-node end-tasks="true" name="(VCiv) Processo com prazo decorrido">
+        <task name="(VCiv) Processo com prazo decorrido" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (VCiv) Controle de Prazos" name="Nó de Desvio - (VCiv) Controle de Prazos">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Término" name="Finalizar"/>
+    </task-node>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

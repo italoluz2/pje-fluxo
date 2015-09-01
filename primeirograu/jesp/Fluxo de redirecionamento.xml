@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="Fluxo de redirecionamento">
+    <description><![CDATA[Fluxo de redirecionamento com base na competência para controle de conflito de competência.]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - Fluxo de redirecionamento">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('-1:1338,1342:1469')}"/>
+    </swimlane>
+    <swimlane name="solicitante">
+        <assignment actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="solicitante"/>
+        <transition to="É competência de Fazenda?" name="É competência de Fazenda?"/>
+    </start-state>  
+    <!-- NODES -->
+    <decision expression="#{processoTrfHome.possuiCompetencia(10) || ' 101 2 14 15 82 '.contains(' '.concat(tramitacaoProcessualService.recuperaProcesso().orgaoJulgador.idOrgaoJulgador).concat(' ')) ? 'É jurisdição de Fazenda?' : 'É competência de JEC?'}" name="É competência de Fazenda?">
+        <transition to="É competência de JEC?" name="É competência de JEC?"/>
+        <transition to="É jurisdição de Fazenda?" name="É jurisdição de Fazenda?"/>
+    </decision>
+    <end-state name="Término"/>
+    <decision expression="#{processoTrfHome.possuiCompetencia(3) ? 'É classe de execução do JEC?' : 'É competência de CEJUSC?'}" name="É competência de JEC?">
+        <transition to="É classe de execução do JEC?" name="É classe de execução do JEC?"/>
+        <transition to="É competência de CEJUSC?" name="É competência de CEJUSC?"/>
+    </decision>
+    <decision expression="#{processoTrfHome.possuiCompetencia(18) ? 'Fluxo de conhecimento CEJUSC' : 'Fluxo de conhecimento de VCiv'}" name="É competência de CEJUSC?">
+        <transition to="Fluxo de conhecimento CEJUSC" name="Fluxo de conhecimento CEJUSC"/>
+        <transition to="Fluxo de conhecimento de VCiv" name="Fluxo de conhecimento de VCiv"/>
+    </decision>
+    <process-state name="Fluxo de conhecimento do JEC">
+        <sub-process name="Fluxo básico de conhecimento" binding="late"/>
+        <transition to="Término" name="Término"/>
+    </process-state>
+    <decision expression="#{competenciaClasseAssuntoHome.processoContemClasseAssunto('159;156') ? 'Fluxo de execução do JEC' : 'Fluxo de conhecimento do JEC'}" name="É classe de execução do JEC?">
+        <transition to="Fluxo de execução do JEC" name="Fluxo de execução do JEC"/>
+        <transition to="Fluxo de conhecimento do JEC" name="Fluxo de conhecimento do JEC"/>
+    </decision>
+    <process-state name="Fluxo de execução do JEC">
+        <sub-process name="Cumprimento de sentença" binding="late"/>
+        <transition to="Término" name="Término"/>
+    </process-state>
+    <process-state name="Fluxo de conhecimento de VCiv">
+        <sub-process name="(VCiv) Fluxo básico de conhecimento" binding="late"/>
+        <transition to="Término" name="Término"/>
+    </process-state>
+    <process-state name="Fluxo de conhecimento CEJUSC">
+        <sub-process name="CEJUSC" binding="late"/>
+        <transition to="Término" name="Término"/>
+    </process-state>
+    <task-node end-tasks="true" name="Nó de Desvio - Fluxo de redirecionamento">
+        <task name="Nó de Desvio - Fluxo de redirecionamento" swimlane="Nó de Desvio - Fluxo de redirecionamento"/>
+        <transition to="Término" name="Término"/>
+    </task-node>
+    <decision expression="#{tramitacaoProcessualService.recuperaProcesso().jurisdicao.idJurisdicao == 12 &amp;&amp; !tramitacaoProcessualService.recuperaProcesso().isIncidente ? 'Deslocar orgão julgador' : 'Fluxo de conhecimento de VCiv'}" name="É jurisdição de Fazenda?">
+        <transition to="Deslocar orgão julgador" name="Deslocar orgão julgador"/>
+        <transition to="Fluxo de conhecimento de VCiv" name="Fluxo de conhecimento de VCiv"/>
+    </decision>
+    <node name="Deslocar orgão julgador">
+        <transition to="Fluxo de conhecimento de VCiv" name="Fluxo de conhecimento de VCiv"/>
+        <event type="node-enter">
+            <action expression="#{processoJudicialService.deslocarOrgaoJulgador(tramitacaoProcessualService.recuperaProcesso(),102,0,252,true)}"/>
+        </event>
+    </node>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event> 
+</process-definition>

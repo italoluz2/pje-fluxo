@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Preparar Sessão de Julgamento">
+    <description><![CDATA[Controle de processos antes e depois da sessão de julgamento..]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Assessoria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:5197,6:1469,8:1338')}" actor-id="#{actor.id}"/>
+    </swimlane>
+    <swimlane name="Nó de Desvio - (TR) Preparar Sessão de Julgamento"/>
+    <swimlane name="Secretaria Segundo Grau">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}"/>
+    </swimlane>
+    <swimlane name="Magistrado">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:5197,6:1469,8:1338')}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Assessoria"/>
+        <transition to="(TR) Elaborar relatório - voto - ementa" name="(TR) Elaborar relatório - voto - ementa"/>
+    </start-state>  
+    <!-- NODES -->
+    <task-node end-tasks="true" name="(TR) Elaborar relatório - voto - ementa">
+        <task name="(TR) Elaborar relatório - voto - ementa" swimlane="Assessoria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_votacaoColegiado" mapped-name="frame:WEB-INF_xhtml_flx_votacaoColegiado" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Confirmar relatório - voto - ementa" name="Encaminhar para confirmação"/>
+        <transition to="(TR) Registrar cancelamento de decisão colegiada" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao',false)}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Confirmar relatório - voto - ementa">
+        <task name="(TR) Confirmar relatório - voto - ementa" swimlane="Magistrado">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_votacaoColegiado" mapped-name="frame:WEB-INF_xhtml_flx_votacaoColegiado" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Registrar aptidão para julgamento" name="Solicitar inclusão em pauta"/>
+        <transition to="(TR) Elaborar relatório - voto - ementa" name="Retornar à assessoria"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao',false)}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao')}"/>
+        </event>
+    </task-node>
+    <node name="(TR) Registrar aptidão para julgamento">
+        <transition to="(TR) Aguardando sessão de julgamento" name="(TR) Aguardando sessão de julgamento"/>
+        <event type="node-enter">
+            <action expression="#{processoJudicialManager.aptidaoParaJulgamento(processoTrfHome.instance.idProcessoTrf, true)}"/>
+        </event>
+    </node>
+    <node name="(TR) Retirar aptidão para julgamento">
+        <transition to="(TR) Elaborar relatório - voto - ementa" name="(TR) Elaborar relatório - voto - ementa"/>
+        <event type="node-enter">
+            <action expression="#{processoJudicialManager.aptidaoParaJulgamento(processoTrfHome.instance.idProcessoTrf, false)}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Aguardando sessão de julgamento">
+        <task name="(TR) Aguardando sessão de julgamento" swimlane="Assessoria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_votacaoVogal" mapped-name="frame:WEB-INF_xhtml_flx_votacaoVogal" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Retirar aptidão para julgamento" name="Retirar pedido de pauta">
+            <condition expression="#{tramitacaoProcessualService.recuperaProcesso().selecionadoPauta or tramitacaoProcessualService.recuperaProcesso().selecionadoJulgamento}"/>
+        </transition>
+        <transition to="(TR) Houve julgamento?" name="Verificar se houve julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Registrar aptidão para julgamento" name="Solicitar inclusão em pauta">
+            <condition expression="#{not (tramitacaoProcessualService.recuperaProcesso().selecionadoPauta or tramitacaoProcessualService.recuperaProcesso().selecionadoJulgamento)}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:colegiado:aguardaSessao', true)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:colegiado:aguardaSessao:relator', true)}"/>
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Verificar se houve julgamento')}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:fluxo:colegiado:aguardaSessao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fluxo:colegiado:aguardaSessao:relator')}"/>
+        </event>
+    </task-node>
+    <decision expression="#{'julgado' == processInstance.contextInstance.getVariable('pje:fluxo:colegiado:situacao') ? '(TR) O relator é o vencedor?' : '(TR) Analisar divergência manifestada'}" name="(TR) Houve julgamento?">
+        <transition to="(TR) O relator é o vencedor?" name="(TR) O relator é o vencedor?"/>
+        <transition to="(TR) Analisar divergência manifestada" name="(TR) Analisar divergência manifestada"/>
+    </decision>
+    <decision expression="#{not empty tramitacaoProcessualService.recuperaVariavel('pje:fluxo:colegiado:orgaoVencedor:id') and tramitacaoProcessualService.recuperaVariavel('pje:fluxo:colegiado:orgaoVencedor:id') == tramitacaoProcessualService.recuperaProcesso().orgaoJulgador.idOrgaoJulgador ? '(TR) Assinar inteiro teor' : '(TR) Deslocar para o gabinete vencedor'}" name="(TR) O relator é o vencedor?">
+        <transition to="(TR) Deslocar para o gabinete vencedor" name="(TR) Deslocar para o gabinete vencedor"/>
+        <transition to="(TR) Assinar inteiro teor" name="(TR) Assinar inteiro teor"/>
+    </decision>
+    <node name="(TR) Deslocar para o gabinete vencedor">
+        <transition to="(TR) Assinar inteiro teor" name="(TR) Assinar inteiro teor"/>
+        <event type="node-enter">
+            <action expression="#{processInstance.contextInstance.setVariable('pje:fluxo:deslocamento:orgaoDestino', processInstance.contextInstance.getVariable('pje:fluxo:colegiado:orgaoVencedor:id'))}"/>
+            <action expression="#{processInstance.contextInstance.setVariable('pje:fluxo:deslocamento:orgaoCargoDestino', processInstance.contextInstance.getVariable('pje:fluxo:colegiado:cargoVencedor:id'))}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.deslocarFluxoParaOrgaoDiverso(processInstance.contextInstance.getVariable('processo'))}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Analisar divergência manifestada">
+        <task name="(TR) Analisar divergência manifestada" swimlane="Assessoria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_votacaoColegiado" mapped-name="frame:WEB-INF_xhtml_flx_votacaoColegiado" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Confirmar alteração de voto" name="Enviar para confirmação"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao', false)}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Confirmar alteração de voto">
+        <task name="(TR) Confirmar alteração de voto" swimlane="Assessoria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_votacaoColegiado" mapped-name="frame:WEB-INF_xhtml_flx_votacaoColegiado" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Aguardando sessão de julgamento" name="Aguardar sessão de julgamento"/>
+        <transition to="(TR) Analisar divergência manifestada" name="Devolver à assessoria"/>
+        <event type="task-create">
+            <action expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao',false)}"/>
+        </event>
+        <event type="task-end">
+            <action expression="#{tramitacaoProcessualService.apagaVariavelTarefa('pje:fluxo:votacaoColegiado:controlaLiberacao')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Assinar inteiro teor">
+        <task name="(TR) Assinar inteiro teor" swimlane="Assessoria">
+            <controller>
+                <variable name="WEB-INF_xhtml_flx_elaborarAcordao" mapped-name="frame:WEB-INF_xhtml_flx_elaborarAcordao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimentações de julgamento" name="(TR) Lançar movimentações de julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('(TR) Lançar movimentações de julgamento')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:elaborarAcordao:ementa:permiteIncluir',true)}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:elaborarAcordao:relatorio:permiteIncluir',true)}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:elaborarAcordao:voto:permiteIncluir',true)}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="(TR) Lançar movimentações de julgamento">
+        <task name="(TR) Lançar movimentações de julgamento" swimlane="Assessoria"/>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Retornar para gabinete do relator" name="Finalizar e sair da tarefa"/>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('minutaEmElaboracao')}"/>
+        </event>
+        <event type="task-start">
+            <action name="Condicao do lancamento temporario de movimentos" expression="#{lancadorMovimentosService.setCondicaoLancamentoMovimentosTemporarioNoFluxo('#{false}')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('minutaEmElaboracao', tramitacaoProcessualService.recuperaVariavel('pje:atoProferido'))}"/>
+        </event>
+    </task-node>
+    <node name="(TR) Retornar para gabinete do relator">
+        <transition to="(TR) Julgados em sessão" name="(TR) Despachados pós acórdão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fluxo:deslocamento:orgaoDestino', tramitacaoProcessualService.recuperaProcesso().orgaoJulgador.idOrgaoJulgador)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fluxo:deslocamento:orgaoCargoDestino', tramitacaoProcessualService.recuperaProcesso().orgaoJulgadorCargo.idOrgaoJulgadorCargo)}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fluxo:deslocamento:colegiadoDestino', tramitacaoProcessualService.recuperaProcesso().orgaoJulgadorColegiado.idOrgaoJulgadorColegiado)}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.deslocarFluxoParaOrgaoDiverso(processInstance.contextInstance.getVariable('processo'))}"/>
+        </event>
+    </node>
+    <node name="(TR) Registrar cancelamento de decisão colegiada">
+        <transition to="Término" name="Término"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:decisaocolegiada:cancelada', true)}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="(TR) Julgados em sessão">
+        <task name="(TR) Julgados em sessão" swimlane="Secretaria Segundo Grau">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+                <variable name="MovimentarLote" mapped-name="movimentarLote:MovimentarLote" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Término" name="Cumprir acórdão"/>
+        <transition to="Nó de Desvio - (TR) Preparar Sessão de Julgamento" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Lançar movimentações de julgamento" name="Retornar para lançar movimentações"/>
+    </task-node>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Preparar Sessão de Julgamento">
+        <task name="Nó de Desvio - (TR) Preparar Sessão de Julgamento" swimlane="Nó de Desvio - (TR) Preparar Sessão de Julgamento"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Elaborar relatório - voto - ementa" name="(TR) Elaborar relatório - voto - ementa"/>
+        <transition to="(TR) Aguardando sessão de julgamento" name="(TR) Aguardando sessão de julgamento"/>
+        <transition to="(TR) Analisar divergência manifestada" name="(TR) Analisar divergência manifestada"/>
+        <transition to="(TR) Confirmar alteração de voto" name="(TR) Confirmar alteração de voto"/>
+        <transition to="(TR) Assinar inteiro teor" name="(TR) Assinar inteiro teor"/>
+        <transition to="(TR) Lançar movimentações de julgamento" name="(TR) Lançar movimentações de julgamento"/>
+        <transition to="(TR) Confirmar relatório - voto - ementa" name="(TR) Confirmar relatório - voto - ementa"/>
+        <transition to="(TR) Julgados em sessão" name="(TR) Despachados pós acórdão"/>
+    </task-node>
+    <end-state name="Término"/>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

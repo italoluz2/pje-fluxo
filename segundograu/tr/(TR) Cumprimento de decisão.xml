@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="(TR) Cumprimento de decisão">
+    <description><![CDATA[Cumprimento de decisões pela secretaria judiciária...]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Nó de Desvio - (TR) Cumprimento de decisão"/>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('8:1338,8:5483')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(TR) Separação em cumprimento de decisão" name="(TR) Separação em cumprimento de decisão"/>
+    </start-state>  
+    <!-- NODES -->
+    <fork name="(TR) Separação em cumprimento de decisão">
+        <transition to="(TR) É apensar ou desapensar processo?" name="(TR) É apensar ou desapensar processo?"/>
+        <transition to="(TR) É certificar decurso de prazo?" name="(TR) É certificar decurso de prazo?"/>
+        <transition to="(TR) É certificar trânsito em julgador?" name="(TR) É certificar trânsito em julgador?"/>
+        <transition to="(TR) É controlar retorno de expediente?" name="(TR) É controlar retorno de expediente?"/>
+        <transition to="(TR) É citar e(ou) intimar via sistema ou correios?" name="(TR) É citar e(ou) intimar via sistema ou correios?"/>
+        <transition to="(TR) É expedir carta precatória ou rogatória?" name="(TR) É expedir carta precatória ou rogatória?"/>
+        <transition to="(TR) É expedir de mandado?" name="(TR) É expedir de mandado?"/>
+        <transition to="(TR) É expedir ofício?" name="(TR) É expedir ofício?"/>
+        <transition to="(TR) É intimar MP?" name="(TR) É intimar MP?"/>
+        <transition to="(TR) É suspender processo?" name="(TR) É suspender processo?"/>
+    </fork>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:apesar_desapensar') ? '(TR) Apensar ou desapensar processo' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É apensar ou desapensar processo?">
+        <transition to="(TR) Apensar ou desapensar processo" name="(TR) Apensar ou desapensar processo"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Apensar ou desapensar processo">
+        <task name="(TR) Apensar ou desapensar processo" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_associarProcessos" mapped-name="frame:Processo_Fluxo_associarProcessos" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - (TR) Cumprimento de decisão" name="Nó de Desvio - (TR) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Junção em cumprimento de decisão" name="Finalizar e sair da tarefa"/>
+    </task-node>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:certificar_decurso') ? '(TR) Certificação de decurso de prazo' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É certificar decurso de prazo?">
+        <transition to="(TR) Certificação de decurso de prazo" name="(TR) Certificação de decurso de prazo"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Certificação de decurso de prazo">
+        <sub-process name="(TR) Elaborar documentos" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:oficio')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:transito_julgado')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:elabdoc:decurso_prazo','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:outros_documentos')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:decurso_prazo')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:certificar_transito') ? '(TR) Certificação de trânsito em julgado' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É certificar trânsito em julgador?">
+        <transition to="(TR) Certificação de trânsito em julgado" name="(TR) Certificação de trânsito em julgado"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Certificação de trânsito em julgado">
+        <sub-process name="(TR) Elaborar documentos" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:oficio')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:elabdoc:transito_julgado','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:decurso_prazo')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:outros_documentos')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:transito_julgado')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:controlar_retorno_expediente') ? '(TR) Controle de retorno de expedientes' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É controlar retorno de expediente?">
+        <transition to="(TR) Controle de retorno de expedientes" name="(TR) Controle de retorno de expedientes"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Controle de retorno de expedientes">
+        <sub-process name="(TR) Controle de prazos e retorno de expedientes" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:citar_intimar') ? '(TR) Citação e(ou) intimação via sistema ou correios' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É citar e(ou) intimar via sistema ou correios?">
+        <transition to="(TR) Citação e(ou) intimação via sistema ou correios" name="(TR) Citação e(ou) intimação via sistema ou correios"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Citação e(ou) intimação via sistema ou correios">
+        <sub-process name="(TR) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:pac:citar_intimar','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:intimar_MP')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_precatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_rogatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:mandado')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:publicar_dje')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:expedir_carta') ? '(TR) Expedir carta precatória ou rogatória' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É expedir carta precatória ou rogatória?">
+        <transition to="(TR) Expedir carta precatória ou rogatória" name="(TR) Expedir carta precatória ou rogatória"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <task-node end-tasks="true" name="(TR) Expedir carta precatória ou rogatória">
+        <task name="(TR) Expedir carta precatória ou rogatória" swimlane="Secretaria"/>
+        <transition to="Nó de Desvio - (TR) Cumprimento de decisão" name="Nó de Desvio - (TR) Cumprimento de decisão">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="(TR) Expedição de carta precatória" name="Expedir carta precatória"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="Ignorar e sair da tarefa"/>
+        <transition to="(TR) Expedição de carta rogatória" name="Expedir carta rogatória"/>
+    </task-node>
+    <process-state name="(TR) Expedição de carta precatória">
+        <sub-process name="(TR) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:intimar_MP')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:pac:carta_precatoria','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_rogatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:mandado')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:publicar_dje')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_precatoria')}"/>
+        </event>
+    </process-state>
+    <process-state name="(TR) Expedição de carta rogatória">
+        <sub-process name="(TR) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:intimar_MP')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_precatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:pac:carta_rogatoria','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:mandado')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:publicar_dje')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_rogatoria')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:expedir_mandado') ? '(TR) Expedição de mandado' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É expedir de mandado?">
+        <transition to="(TR) Expedição de mandado" name="(TR) Expedição de mandado"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Expedição de mandado">
+        <sub-process name="(TR) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:intimar_MP')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_precatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_rogatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:pac:mandado','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:publicar_dje')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:mandado')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:expedir_oficio') ? '(TR) Expedição de ofício' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É expedir ofício?">
+        <transition to="(TR) Expedição de ofício" name="(TR) Expedição de ofício"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Expedição de ofício">
+        <sub-process name="(TR) Elaborar documentos" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:elabdoc:oficio','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:transito_julgado')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:decurso_prazo')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:outros_documentos')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:elabdoc:oficio')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:intimar_MP') ? '(TR) Intimação ao Ministério Público' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É intimar MP?">
+        <transition to="(TR) Intimação ao Ministério Público" name="(TR) Intimação ao Ministério Público"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Intimação ao Ministério Público">
+        <sub-process name="(TR) Preparar Ato de Comunicação" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:citar_intimar')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('tr:pac:intimar_MP','true')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_precatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:carta_rogatoria')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:mandado')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:publicar_dje')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('tr:pac:intimar_MP')}"/>
+        </event>
+    </process-state>
+    <decision expression="#{true == tramitacaoProcessualService.recuperaVariavel('tr:cumpridec:suspender') ? '(TR) Suspensão de processo' : '(TR) Junção em cumprimento de decisão'}" name="(TR) É suspender processo?">
+        <transition to="(TR) Suspensão de processo" name="(TR) Suspensão de processo"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </decision>
+    <process-state name="(TR) Suspensão de processo">
+        <sub-process name="(TR) Controle de suspensão" binding="late"/>
+        <transition to="(TR) Junção em cumprimento de decisão" name="(TR) Junção em cumprimento de decisão"/>
+    </process-state>
+    <join name="(TR) Junção em cumprimento de decisão">
+        <transition to="Término" name="Término"/>
+    </join>
+    <task-node end-tasks="true" name="Nó de Desvio - (TR) Cumprimento de decisão">
+        <task name="Nó de Desvio - (TR) Cumprimento de decisão" swimlane="Nó de Desvio - (TR) Cumprimento de decisão"/>
+        <transition to="Término" name="Término"/>
+        <transition to="(TR) Apensar ou desapensar processo" name="(TR) Apensar ou desapensar processo"/>
+        <transition to="(TR) Expedir carta precatória ou rogatória" name="(TR) Expedir carta precatória ou rogatória"/>
+    </task-node>
+    <end-state name="Término">
+        <event type="node-enter">
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:apesar_desapensar')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:certificar_decurso')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:certificar_transito')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:citar_intimar')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:controlar_retorno_expediente')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:expedir_carta')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:expedir_mandado')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:expedir_oficio')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:intimar_MP')}"/>
+            <action name="upd" expression="#{tramitacaoProcessualService.apagaVariavel('tr:cumpridec:suspender')}"/>
+        </event>
+    </end-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>

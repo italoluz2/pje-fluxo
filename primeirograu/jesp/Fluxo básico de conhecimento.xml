@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<process-definition xmlns="urn:jbpm.org:jpdl-3.2" name="Fluxo básico de conhecimento">
+    <description><![CDATA[.......]]></description>  
+    <!-- SWIMLANES -->
+    <swimlane name="Direção">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338')}"/>
+    </swimlane>
+    <swimlane name="Gabinete">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('6:1469,5:1338,8:5852,8:5853')}"/>
+    </swimlane>
+    <swimlane name="Nó de Desvio - Fluxo básico de conhecimento">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,6:1469')}"/>
+    </swimlane>
+    <swimlane name="Assessoria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('7:1469,7:5197,5:1338,6:1469,7:1338,8:5852,8:5853')}"/>
+    </swimlane>
+    <swimlane name="Conciliação">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,7:5886,7:5197,6:1469,8:5852,8:5853')}"/>
+    </swimlane>
+    <swimlane name="Secretaria">
+        <assignment pooled-actors="#{localizacaoAssignment.getPooledActors('5:1338,5:5186,5:5197,6:1469,8:5852,8:5853')}" actor-id="#{actor.id}"/>
+    </swimlane>  
+    <!-- START-STATE -->
+    <start-state name="Início">
+        <task name="Tarefa inicial" swimlane="Secretaria"/>
+        <transition to="(JESP) Vem de outro fluxo?" name="(JESP) Vem de outro fluxo?"/>
+    </start-state>  
+    <!-- NODES -->
+    <decision expression="#{org.jboss.seam.bpm.processInstance.contextInstance.getVariable('pje:fbc:EhDeOutroFluxo') ? 'Verificar providência a adotar' : 'Verificar urgência ou sigilo'}" name="(JESP) Vem de outro fluxo?">
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+        <transition to="Verificar urgência ou sigilo" name="Verificar urgência ou sigilo"/>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:EhDeOutroFluxo')}"/>
+        </event>
+    </decision>
+    <decision expression="#{processoTrfHome.isEmPedidoUrgencia() ? 'Decidir urgência inicial' : 'Escolher providência inicial'}" name="Verificar urgência ou sigilo">
+        <transition to="Escolher providência inicial" name="Escolher providência inicial"/>
+        <transition to="Decidir urgência inicial" name="Decidir urgência inicial"/>
+    </decision>
+    <node name="FazConcDec">
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(6).lancarMovimento()}"/>
+        </event>
+    </node>
+    <decision expression="#{processoAudienciaHome.existeAudienciaPendenteProcesso() ? 'Verificar providência a adotar' : 'Escolher providência inicial'}" name="Houve designação de audiência?">
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+        <transition to="Escolher providência inicial" name="Escolher providência inicial"/>
+    </decision>
+    <task-node end-tasks="true" name="Escolher providência inicial">
+        <task name="Escolher providência inicial" swimlane="Secretaria"/>
+        <transition to="Designar audiência" name="Designar audiência">
+            <condition expression="#{!processoAudienciaHome.existeAudienciaPendenteProcesso()}"/>
+        </transition>
+        <transition to="Citar para resposta" name="Preparar citação">
+            <condition expression="#{processoAudienciaHome.existeAudienciaPendenteProcesso()}"/>
+        </transition>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Verificar providência a adotar" name="Outras providências a adotar"/>
+    </task-node>
+    <process-state name="Citar para resposta">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Aguardando resposta de citação" name="Aguardando resposta de citação"/>
+    </process-state>
+    <process-state name="Decidir">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_generica', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_generica')}"/>
+        </event>
+    </process-state>
+    <process-state name="Aguardando resposta de citação">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </process-state>
+    <process-state name="Dar cumprimento a ato judicial">
+        <sub-process name="Cumprimento de decisão" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </process-state>
+    <task-node end-tasks="true" name="Verificar providência a adotar">
+        <task name="Verificar providência a adotar" swimlane="Secretaria">
+            <controller>
+                <variable name="MovimentarLote" mapped-name="movimentarLote:MovimentarLote" access="read,write"/>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Realizar audiência" name="Realizar audiência"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Designar audiência" name="Designar audiência">
+            <condition expression="#{!processoAudienciaHome.existeAudienciaPendenteProcesso()}"/>
+        </transition>
+        <transition to="Aguardar audiência" name="Aguardar audiência">
+            <condition expression="#{processoAudienciaHome.existeAudienciaPendenteProcesso()}"/>
+        </transition>
+        <transition to="Mudar Classe" name="Mudar Classe"/>
+        <transition to="Citar para resposta" name="Citar - intimar"/>
+        <transition to="Expedir alvará judicial" name="Expedir alvará judicial">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <transition to="Expedir documento" name="Expedir documento"/>
+        <transition to="Verificar se houve trânsito em julgado" name="Verificar se houve trânsito em julgado"/>
+        <transition to="Decidir" name="Fazer conclusão para Decisão"/>
+        <transition to="Despachar processo" name="Fazer conclusão para Despacho"/>
+        <transition to="Julgar" name="Fazer conclusão para Sentença"/>
+        <transition to="Decidir urgência" name="Fazer conclusão para Decisão de urgência"/>
+        <transition to="Julgar homologação e(ou) extinção" name="Fazer conclusão para Sentença de homologação e(ou) extinção"/>
+        <transition to="Encaminhar para outro fluxo (VCic)" name="Encaminhar para outro fluxo (VCic)"/>
+    </task-node>
+    <task-node end-tasks="true" name="Expedir alvará judicial">
+        <task name="Expedir alvará judicial" swimlane="Secretaria">
+            <controller>
+                <variable name="minutaEmElaboracao" mapped-name="textEditSecretariaJT:minutaEmElaboracao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Assinar alvará judicial" name="Encaminhar para assinatura do alvará judicial"/>
+        <event type="node-enter">
+            <action name="upd" expression="#{modeloDocumento.set('minutaEmElaboracao',102)}"/>
+        </event>
+        <event type="task-start">
+            <action expression="#{tipoDocumento.set('minutaEmElaboracao',91)}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Assinar alvará judicial">
+        <task name="Assinar alvará judicial" swimlane="Gabinete">
+            <controller>
+                <variable name="Processo_Fluxo_revisarMinuta" mapped-name="frame:Processo_Fluxo_revisarMinuta" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Expedir alvará judicial" name="Retornar para expedição do alvará"/>
+        <transition to="Lançar movimento de expedição de alvará" name="Lançar movimento de expedição de alvará">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="node-enter">
+            <action name="upd" expression="#{modeloDocumento.set('Processo_Fluxo_revisarMinuta',102)}"/>
+        </event>
+        <event type="task-create">
+            <action expression="#{taskInstanceUtil.setFrameDefaultTransition('Lançar movimento de expedição de alvará')}"/>
+        </event>
+        <event type="task-start">
+            <action expression="#{tipoDocumento.set('Processo_Fluxo_revisarMinuta',91)}"/>
+        </event>
+    </task-node>
+    <node name="Lançar movimento de expedição de alvará">
+        <transition to="Entregar alvará judicial" name="Entregar alvará judicial"/>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(60).comComplementoDeCodigo(4).doTipoDominio().preencherComElementoDeCodigo(73).lancarMovimento()}"/>
+        </event>
+    </node>
+    <task-node end-tasks="true" name="Entregar alvará judicial">
+        <task name="Entregar alvará judicial" swimlane="Secretaria">
+            <controller>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Arquivar o processo" name="Arquivar o processo"/>
+        <transition to="Verificar providência a adotar" name="Encaminhar para outras providências"/>
+    </task-node>
+    <node name="FazConcJulg">
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(36).lancarMovimento()}"/>
+        </event>
+    </node>
+    <node name="FazConcDesp">
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(51).comComplementoDeCodigo(3).doTipoDominio().preencherComElementoDeCodigo(5).lancarMovimento()}"/>
+        </event>
+    </node>
+    <process-state name="Citar-intimar">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </process-state>
+    <task-node end-tasks="true" name="Mudar Classe">
+        <task name="Mudar Classe" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_RetificacaoAutuacao_updateRetificacaoAutuacao" mapped-name="page:Processo_RetificacaoAutuacao_updateRetificacaoAutuacao" access="read,write"/>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Fluxo Execução" name="Prosseguir">
+            <condition expression="#{competenciaClasseAssuntoHome.processoContemClasseAssunto('159')}"/>
+        </transition>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </task-node>
+    <process-state name="Fluxo Execução">
+        <sub-process name="Cumprimento de sentença" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </process-state>
+    <process-state name="Julgar">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:sentenca', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:sentenca_generica', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:sentenca_generica')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:sentenca')}"/>
+        </event>
+    </process-state>
+    <process-state name="Despachar processo">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:despacho', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:despacho_generico', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:despacho_generico')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:despacho')}"/>
+        </event>
+    </process-state>
+    <process-state name="Intimar do julgamento">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Verificar se houve trânsito em julgado" name="Aguardar decurso de prazo"/>
+    </process-state>
+    <task-node end-tasks="true" name="Verificar se houve trânsito em julgado">
+        <task name="Aguardar decurso de prazo" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_visualizarDecisao" mapped-name="frame:Processo_Fluxo_visualizarDecisao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Certificar decurso" name="Certificar decurso"/>
+    </task-node>
+    <decision expression="#{org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processarFeitos:recursoInterno') ? 'Julgar recurso interno' : 'Verifica existencia recurso externo'}" name="Verifica existência de recurso interno">
+        <description><![CDATA[]]></description>
+        <transition to="Verifica existencia recurso externo" name="Verifica existencia recurso externo"/>
+        <transition to="Julgar recurso interno" name="Julgar recurso interno"/>
+        <event type="task-end">
+            <action expression="#{org.jboss.seam.bpm.processInstance.contextInstance.deleteVariable('processarFeitos:recursoInterno')}"/>
+        </event>
+    </decision>
+    <decision expression="#{org.jboss.seam.bpm.processInstance.contextInstance.getVariable('processarFeitos:recursoExterno') ? 'Apreciar admissibilidade recursal' : 'Avaliar forma de encerramento'}" name="Verifica existencia recurso externo">
+        <transition to="Apreciar admissibilidade recursal" name="Apreciar admissibilidade recursal"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <event type="task-end">
+            <action expression="#{org.jboss.seam.bpm.processInstance.contextInstance.deleteVariable('processarFeitos:recursoExterno')}"/>
+        </event>
+    </decision>
+    <process-state name="Apreciar admissibilidade recursal">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Intimar da decisão de admissibilidade" name="Intimar para contrarrazões"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_recurso', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_recurso')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao')}"/>
+        </event>
+    </process-state>
+    <process-state name="Intimar da decisão de admissibilidade">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Aguardar prazo da intimação de admissibilidade" name="Aguardar prazo da intimação de admissibilidade"/>
+    </process-state>
+    <task-node end-tasks="true" name="Avaliar resposta da intimação de admissibilidade">
+        <task name="Avaliar resposta da intimação de admissibilidade" swimlane="Secretaria"/>
+        <transition to="Encaminhar para instância superior" name="Encaminhar para instância superior"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+    </task-node>
+    <task-node end-tasks="true" name="Certificar decurso">
+        <task name="Certificar decurso" swimlane="Secretaria">
+            <controller>
+                <variable name="certidaoDecursoPrazo" mapped-name="textEditSignature:certidaoDecursoPrazo" access="read,write"/>
+            </controller>
+        </task>
+        <description><![CDATA[]]></description>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Analisar providência após certificar decurso" name="Analisar providência após certificar decurso"/>
+        <transition to="Verificar providência a adotar" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{tramitacaoProcessualService.gravaVariavelTarefa('pje:fluxo:transicao:dispensaRequeridos', 'Ignorar e sair da tarefa')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Encaminhar para instância superior">
+        <task name="Encaminhar para instância superior" swimlane="Secretaria">
+            <controller>
+                <variable name="Intercomunicacao_RetificacaoAutuacao_updateRetificacaoAutuacao" mapped-name="frame:Intercomunicacao_RetificacaoAutuacao_updateRetificacaoAutuacao" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Aguardar julgamento de instância superior" name="Aguardar julgamento de instância superior">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Avaliar forma de encerramento" name="Ignorar e sair da tarefa"/>
+        <event type="task-create">
+            <action name="upd" expression="#{taskInstanceUtil.setFrameDefaultTransition('Aguardar julgamento de instância superior')}"/>
+        </event>
+        <event type="task-start">
+            <action name="upd" expression="#{taskInstanceUtil.setVariable('comboMotivoRemessa','18;37,38,39,40,90')}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Aguardar julgamento de instância superior">
+        <task name="Aguardar julgamento de instância superior" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_ConsultaProcesso_Detalhe_detalheProcessoVisualizacao" mapped-name="page:Processo_ConsultaProcesso_Detalhe_detalheProcessoVisualizacao" access="read,write"/>
+                <variable name="aviso" mapped-name="textAlert:aviso" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="node-enter">
+            <action expression="#{preencherMovimento.deCodigo(123).comComplementoDeCodigo(7).doTipoLivre().preencherComTexto('Turma Recursal').comComplementoDeCodigo(18).doTipoDominio().preencherComElementoDeCodigo(motivoRemessa.codigoGlossario).lancarMovimento()}"/>
+        </event>
+    </task-node>
+    <task-node end-tasks="true" name="Avaliar forma de encerramento">
+        <task name="Avaliar forma de encerramento" swimlane="Secretaria"/>
+        <transition to="Verificar providências finais" name="Fazer conclusão para Despacho"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Verificar providência a adotar" name="Encaminhar para outras providências"/>
+        <transition to="Arquivar o processo" name="Arquivar o processo"/>
+        <transition to="Encaminhar para instância superior" name="Encaminhar para instância superior"/>
+    </task-node>
+    <process-state name="Verificar providências finais">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Confirmar cumprimento providências finais" name="Confirmar cumprimento providências finais"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:despacho', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:despacho_generico', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:despacho_generico')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:despacho')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="Confirmar cumprimento providências finais">
+        <task name="Confirmar cumprimento providências finais" swimlane="Secretaria"/>
+        <transition to="Aguardar cumprimento providências finais" name="Aguardar cumprimento providências finais"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Arquivar o processo" name="Arquivar o processo"/>
+    </task-node>
+    <process-state name="Arquivar o processo">
+        <sub-process name="Arquivamento" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+        <transition to="Término" name="Término"/>
+    </process-state>
+    <task-node end-tasks="true" name="Aguardar cumprimento providências finais">
+        <task name="Aguardar cumprimento providências finais" swimlane="Secretaria"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <process-state name="Intimar MP de recurso interposto">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Aguardando manifestação do MP" name="Aguardando manifestação do MP"/>
+    </process-state>
+    <process-state name="Aguardando manifestação do MP">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Avaliar resposta da intimação de admissibilidade" name="Avaliar resposta da intimação de admissibilidade"/>
+    </process-state>
+    <task-node end-tasks="true" name="Designar audiência">
+        <task name="Designar audiência" swimlane="Conciliação">
+            <controller>
+                <variable name="Processo_Fluxo_abaDesignarAudiencia" mapped-name="frame:Processo_Fluxo_abaDesignarAudiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Citar para audiência" name="Citar e(ou) intimar"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <process-state name="Citar para audiência">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Aguardar resposta citação audiência" name="Aguardar resposta citação audiência"/>
+    </process-state>
+    <task-node end-tasks="true" name="Aguardar audiência">
+        <task name="Aguardar audiência" swimlane="Conciliação"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </task-node>
+    <task-node end-tasks="true" name="Realizar audiência">
+        <task name="Realizar audiência" swimlane="Conciliação">
+            <controller>
+                <variable name="Processo_Fluxo_abaDesignarAudiencia" mapped-name="frame:Processo_Fluxo_abaDesignarAudiencia" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <end-state name="Término"/>
+    <task-node end-tasks="true" name="Nó de Desvio - Fluxo básico de conhecimento">
+        <task name="Nó de Desvio - Fluxo básico de conhecimento" swimlane="Nó de Desvio - Fluxo básico de conhecimento"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+        <transition to="Verificar se houve trânsito em julgado" name="Verificar se houve trânsito em julgado"/>
+        <transition to="Encaminhar para instância superior" name="Encaminhar para instância superior"/>
+        <transition to="Aguardar julgamento de instância superior" name="Aguarda julgamento de instância superior"/>
+        <transition to="Certificar decurso" name="Certificar decurso"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+        <transition to="Avaliar resposta da intimação de admissibilidade" name="Avaliar resposta da intimação de admissibilidade"/>
+        <transition to="Escolher providência inicial" name="Escolher providência inicial"/>
+        <transition to="Designar audiência" name="Designar audiência"/>
+        <transition to="Aguardar audiência" name="Aguardar audiência"/>
+        <transition to="Realizar audiência" name="Realizar audiência"/>
+        <transition to="Aguardar cumprimento providências finais" name="Aguardar cumprimento providências finais"/>
+        <transition to="Confirmar cumprimento providências finais" name="Confirmar cumprimento providências finais"/>
+        <transition to="Término" name="Término"/>
+        <transition to="Mudar Classe" name="Mudar Classe"/>
+        <transition to="Redistribuir o processo" name="Redistribuir o processo"/>
+        <transition to="Expedir alvará judicial" name="Expedir alvará judicial"/>
+        <transition to="Assinar alvará judicial" name="Assinar alvará judicial"/>
+        <transition to="Entregar alvará judicial" name="Entregar alvará judicial"/>
+        <transition to="Analisar providência após certificar decurso" name="Analisar providência após certificar decurso"/>
+    </task-node>
+    <task-node end-tasks="true" name="Redistribuir o processo">
+        <task name="Redistribuir o processo" swimlane="Secretaria">
+            <controller>
+                <variable name="Processo_Fluxo_abaRedistribuicaoProcesso" mapped-name="frame:Processo_Fluxo_abaRedistribuicaoProcesso" access="read,write,required"/>
+            </controller>
+        </task>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+    </task-node>
+    <process-state name="Expedir documento">
+        <sub-process name="Elaboração de documentos" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+    </process-state>
+    <process-state name="Decidir urgência inicial">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_urgencia_inicial', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_urgencia_inicial')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao')}"/>
+        </event>
+    </process-state>
+    <task-node end-tasks="true" name="Analisar providência após certificar decurso">
+        <task name="Analisar providência após certificar decurso" swimlane="Secretaria">
+            <controller>
+                <variable name="processarFeitos_recursoInterno" mapped-name="sim_nao:processarFeitos_recursoInterno" access="read,write"/>
+                <variable name="processarFeitos_recursoExterno" mapped-name="sim_nao:processarFeitos_recursoExterno" access="read,write"/>
+            </controller>
+        </task>
+        <transition to="Verifica existência de recurso interno" name="Verifica existência de recurso interno"/>
+        <transition to="Verificar providência a adotar" name="Encaminhar para outras providências"/>
+        <transition to="Nó de Desvio - Fluxo básico de conhecimento" name="Nó de Desvio - Fluxo básico de conhecimento">
+            <condition expression="#{true}"/>
+        </transition>
+        <event type="task-end">
+            <action expression="#{org.jboss.seam.bpm.processInstance.contextInstance.setVariable('processarFeitos:recursoInterno', org.jboss.seam.bpm.taskInstance.getVariable('sim_nao:processarFeitos_recursoInterno'))}"/>
+            <action expression="#{org.jboss.seam.bpm.processInstance.contextInstance.setVariable('processarFeitos:recursoExterno', org.jboss.seam.bpm.taskInstance.getVariable('sim_nao:processarFeitos_recursoExterno'))}"/>
+        </event>
+    </task-node>
+    <process-state name="Julgar recurso interno">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Intimar de julgamento de recurso interno" name="Intimar de julgamento de recurso interno"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_embargos_declaracao', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_embargos_declaracao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao')}"/>
+        </event>
+    </process-state>
+    <process-state name="Intimar de julgamento de recurso interno">
+        <sub-process name="Preparar ato de comunicação" binding="late"/>
+        <transition to="Aguardar resposta de intimação de recurso interno" name="Aguardar resposta de intimação de recurso interno"/>
+    </process-state>
+    <process-state name="Aguardar resposta de intimação de recurso interno">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Avaliar forma de encerramento" name="Avaliar forma de encerramento"/>
+    </process-state>
+    <process-state name="Aguardar prazo da intimação de admissibilidade">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Avaliar resposta da intimação de admissibilidade" name="Avaliar resposta da intimação de admissibilidade"/>
+    </process-state>
+    <process-state name="Decidir urgência">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:decisao_urgencia', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao_urgencia')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:decisao')}"/>
+        </event>
+    </process-state>
+    <process-state name="Julgar homologação e(ou) extinção">
+        <sub-process name="(JESP) Preparar Ato Judicial" binding="late"/>
+        <transition to="Dar cumprimento a ato judicial" name="Dar cumprimento a ato judicial"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:sentenca', 'true')}"/>
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:sentenca_homologacao_extincao', 'true')}"/>
+        </event>
+        <event type="node-leave">
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:sentenca_homologacao_extincao')}"/>
+            <action expression="#{tramitacaoProcessualService.apagaVariavel('pje:fbc:sentenca')}"/>
+        </event>
+    </process-state>
+    <process-state name="Aguardar resposta citação audiência">
+        <sub-process name="Controle de prazos" binding="late"/>
+        <transition to="Aguardar audiência" name="Aguardar audiência"/>
+    </process-state>
+    <process-state name="Encaminhar para outro fluxo (VCic)">
+        <sub-process name="(VCiv) Fluxo básico de conhecimento" binding="late"/>
+        <transition to="Verificar providência a adotar" name="Verificar providência a adotar"/>
+        <event type="node-enter">
+            <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:EhDeOutroFluxo', 'true')}"/>
+        </event>
+    </process-state>  
+    <!-- PROCESS-EVENTS -->
+    <event type="node-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="node-leave">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="before-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="superstate-enter">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="transition">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="process-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-end">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-start">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="subprocess-created">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="after-signal">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-assign">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="task-create">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>
+    <event type="timer">
+        <script>br.com.infox.ibpm.util.JbpmEvents.raiseEvent(executionContext)</script>
+    </event>  
+    <!-- ACTIONS --> 
+</process-definition>
