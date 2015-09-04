@@ -393,7 +393,7 @@
             <action expression="#{tramitacaoProcessualService.gravaVariavel('pje:fbc:EhDeOutroFluxo', 'true')}"/>
         </event>
     </process-state>
-    <decision expression="#{tramitacaoProcessualService.recuperaProcesso().competencia.idCompetencia == 3 &amp;&amp; !competenciaClasseAssuntoHome.processoContemClasseAssunto('159;156') ? '(VCiv) Escolher providência inicial' : '(VCiv) Conclusão para despacho inicial'}" name="(VCiv) É competência de juizado especial cível?">
+    <decision expression="#{((tramitacaoProcessualService.recuperaProcesso().competencia.idCompetencia == 3 &amp;&amp; competenciaClasseAssuntoHome.processoContemClasseAssunto('159;156')) || (tramitacaoProcessualService.recuperaProcesso().competencia.idCompetencia != 3)) ? '(VCiv) Conclusão para despacho inicial' : '(VCiv) Escolher providência inicial'}" name="(VCiv) É competência de juizado especial cível?">
         <transition to="(VCiv) Escolher providência inicial" name="(VCiv) Escolher providência inicial"/>
         <transition to="(VCiv) Conclusão para despacho inicial" name="(VCiv) Conclusão para despacho inicial"/>
     </decision>
